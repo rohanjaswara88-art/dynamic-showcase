@@ -30,6 +30,8 @@ const AURA = [
   { glow: ['rgba(170,110,255,0.55)', 16, 200, 0.24], parts: ['blade', 'blade', 'blade', 'guard', 'finsU', 'finsL'], emit: [['static', 36], ['gold', 18]], arcs: 1, ambient: [['dust', 22]] }
 ];
 
+const LANDING = { parts: [], emit: [], ambient: [['dust', 26], ['ember', 9, '255,196,110']] };
+
 export function startFX(canvas) {
   if (!canvas) return () => {};
   const ctx = canvas.getContext('2d', { alpha: true });
@@ -89,7 +91,7 @@ export function startFX(canvas) {
     if (window.__dbg && window.__dbg.fx === 0) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const wi = world.cur, cfg = AURA[wi] || AURA[0], ctl = world.chapters[wi], vf = Math.max(0.6, Math.min(W, H) / 800), bud = budget();
+    const wi = world.cur, cfg = wi < 0 ? LANDING : AURA[wi] || AURA[0], ctl = world.chapters[wi], vf = Math.max(0.6, Math.min(W, H) / 800), bud = budget();
 
     /* emit */
     const live = ctl && ctl.visible;

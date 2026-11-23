@@ -103,7 +103,7 @@ export function startThermal(canvas) {
     if (window.__dbg && window.__dbg.thermal === 0) return;
     const nowS = performance.now() / 1000;
     /* stir where the pointer (or the touch-screen scan wave) is */
-    if (world.lightOn > 0.4 && world.px > -9000) {
+    if (world.lightOn > 0.4 && world.px > -9000 && world.cur >= 0) {
       if (lx !== null) {
         const dx = world.px - lx, dy = world.py - ly, d = Math.hypot(dx, dy);
         if (d > 0.4) {
@@ -116,7 +116,7 @@ export function startThermal(canvas) {
     } else { lx = null; }
     /* a click or tap blows a ring of heat outwards */
     for (const p of world.pulses) if (!seen.has(p)) {
-      seen.add(p);
+      seen.add(p); if (world.cur < 0) continue;
       for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.2832; splat(p.x + Math.cos(a) * 8, p.y + Math.sin(a) * 8, Math.cos(a) * 0.9, -Math.sin(a) * 0.9, 0.22 * p.s, 700); }
       lastStir = nowS; cleared = false;
     }

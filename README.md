@@ -1,9 +1,9 @@
 # dynamic.showcase
 
-A scroll-driven gallery of four fantasy weapons, each drawn in code as pure vector SVG and taken apart piece by piece as
+A landing chronicle (how the four relics were found, read through a magnifying glass that follows the cursor) leading into a scroll-driven gallery of four fantasy weapons, each drawn in code as pure vector SVG and taken apart piece by piece as
 you scroll. Each weapon has its own name and display font, its own world behind it (a WebGL shader), its own aura
-(2D canvas particles), a cursor that lights it and throws a thermal-camera heat wave, a hidden *nature* (one of the sins)
-that shows when the cursor is over it, and a lore card at the end of its scroll.
+(2D canvas particles), a cursor that lights it and stirs a thermal-camera fluid, a hidden *nature* (one of the sins) that is revealed for a
+moment when that heat touches the weapon, and a lore card at the end of its scroll.
 
 React 18, GSAP + ScrollTrigger, Lenis. **There are no image files**: the weapons are SVG paths, the worlds are a fragment
 shader, the auras are generated sprites. Everything stays sharp at any zoom.
@@ -49,11 +49,16 @@ npm run build      # writes ../index.html and ../assets
 - `weapons/data.js`: names, fonts, sins, lore, per-part text and explode offsets.
 - `lib/pose.js`: fitting a weapon into screen regions (hero, exploded overview, a camera for each part, lore) for any screen.
 - `components/Chapter.jsx`: one pinned, scrubbed timeline per weapon, callouts, details panel, lore card.
-- `lib/gl.js`: the one fixed WebGL background (four worlds, crossfaded) plus the thermal heat field and rings.
-  Render scale adapts to the shader's GPU time (timer query).
-- `lib/fx.js`: the one fixed 2D canvas: auras, ambient dust, lightning, thermal rings.
+- `components/Landing.jsx`, `components/Lens.jsx`, `weapons/story.js`: the chronicle and the magnifier (a second, scaled-up
+  copy of the story inside a round glass that follows the pointer). Uncial Antiqua and IM Fell English.
+- `lib/thermal.js`: the thermal cursor, a small GPU fluid simulation (the technique behind React Bits' SplashCursor)
+  painted with an infrared colour map on its own transparent canvas.
+- `lib/gl.js`: the one fixed WebGL background (five worlds, crossfaded: landing fog, hellfire, ice spires and sea,
+  eclipse, thunderstorm over lava). Render scale adapts to the shader's GPU time (timer query).
+- `lib/fx.js`: the one fixed 2D canvas: each weapon's aura (a shape-hugging glow plus flames, frost, smoke or lightning),
+  ambient dust, lightning.
 - `components/Cursor.jsx`: ring cursor, the light point, heat activity, and the nature reveal. On touch screens a scan wave
-  sweeps the weapon every few seconds instead, so the nature still appears.
+  sweeps the weapon every few seconds instead, so the nature still appears; the magnifier is for fine pointers only.
 - `lib/world.js`, `lib/loop.js`: shared state and the single frame loop.
 - `components/rb/`: React Bits components in use (ShinyText, DecryptedText) and some kept for later.
 - `_archive/`: the earlier katana experience and sections, parked.

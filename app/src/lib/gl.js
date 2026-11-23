@@ -8,7 +8,7 @@ const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
 const FS = `
 precision highp float;
 uniform vec2 uRes; uniform float uT, uMix, uFlash, uBolt;
-uniform float uA, uB;
+uniform float uA, uB; uniform vec3 uTint;
 uniform vec2 uMouse;
 
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
@@ -185,7 +185,20 @@ vec3 env3(vec2 uv,float t,float asp){
   return col;
 }
 
+/* 4: the landing: warm dark, slow golden fog that leans toward the colour of the relic being read */
+vec3 env4(vec2 uv,float t,float asp){
+  vec2 p=vec2(uv.x*asp,uv.y);
+  vec3 col=mix(vec3(.02,.016,.012),vec3(.07,.05,.035),smoothstep(1.,.0,uv.y));
+  float f1=fbm(vec2(p.x*1.3+t*.02,p.y*1.6-t*.015)), f2=fbm(vec2(p.x*2.6-t*.03,p.y*2.2+t*.02+4.));
+  vec3 fogc=mix(vec3(.55,.42,.2),uTint,.65);
+  col+=fogc*(smoothstep(.35,.85,f1)*.16+smoothstep(.5,.9,f2)*.1);
+  col+=fogc*exp(-length((uv-vec2(.5,.62))*vec2(asp*.6,1.))*2.2)*.14;
+  col+=fogc*.05*smoothstep(.0,1.,noise(p*220.+t*.05))*smoothstep(.7,.0,uv.y);
+  return col;
+}
+
 vec3 env(float m,vec2 uv,float t,float asp){
+  if(m>3.5) return env4(uv,t,asp);
   if(m<.5) return env0(uv,t,asp);
   if(m<1.5) return env1(uv,t,asp);
   if(m<2.5) return env2(uv,t,asp);
@@ -228,14 +241,15 @@ export function startGL(canvas) {
   const loc = gl.getAttribLocation(prog, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const U = {};
-  ['uRes', 'uT', 'uMix', 'uFlash', 'uBolt', 'uA', 'uB', 'uMouse'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+  ['uRes', 'uT', 'uMix', 'uFlash', 'uBolt', 'uA', 'uB', 'uTint', 'uMouse'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
 
   const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
   const small = Math.min(innerWidth, innerHeight) < 600;
   let quality = reducedStart(small), cw = 0, ch = 0;
   const q = { a: 0, b: 0, mix: 0, to: 0, fl: 0, flT: 3, bolt: 0.5 };
-  const envOf = (i) => WEAPONS[i].env;
-  q.a = q.b = envOf(0);
+  const envOf = (i) => (i < 0 ? 4 : WEAPONS[i].env);
+  const tint = [0.55, 0.42, 0.2];
+  q.a = q.b = envOf(world.cur);
 
   function reducedStart(sm) { return world.reduce ? 0.35 : sm ? 0.42 : 0.55; }
   function resize() {
@@ -288,6 +302,8 @@ export function startGL(canvas) {
     const mixing = q.mix > 0.002 ? 1 : 0;
     const flash = (q.b === 3 && (mixing || q.a === 3) ? 1 : q.a === 3 ? 1 : 0) * q.fl * (0.6 + 0.4 * Math.sin(q.fl * 40));
 
+    for (let k = 0; k < 3; k++) tint[k] += (world.tint[k] - tint[k]) * 0.03;
+    gl.uniform3f(U.uTint, tint[0], tint[1], tint[2]);
     gl.uniform2f(U.uRes, canvas.width, canvas.height);
     gl.uniform1f(U.uT, now - start);
     gl.uniform1f(U.uMix, q.mix); gl.uniform1f(U.uA, q.a); gl.uniform1f(U.uB, q.b);

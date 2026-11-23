@@ -64,8 +64,8 @@ export default function Cursor() {
       /* ring cursor */
       if (ring.current) {
         if (pointer) { rx += (world.mx - rx) * (1 - Math.exp(-dt * 16)); ry += (world.my - ry) * (1 - Math.exp(-dt * 16)); }
-        const show = pointer ? 1 : 0;
-        ring.current.style.opacity = show; dot.current.style.opacity = show;
+        const show = pointer && world.cur >= 0 ? 1 : 0;
+        ring.current.style.opacity = show; dot.current.style.opacity = pointer ? 1 : 0;
         ring.current.style.transform = `translate3d(${rx.toFixed(1)}px,${ry.toFixed(1)}px,0) translate(-50%,-50%) scale(${(1 + 0.7 * world.nature + 0.25 * world.heat).toFixed(3)})`;
         dot.current.style.transform = `translate3d(${world.mx.toFixed(1)}px,${world.my.toFixed(1)}px,0) translate(-50%,-50%)`;
         ring.current.classList.toggle('hot', world.nature > 0.5);

@@ -6,6 +6,7 @@ export default function Nav({ show }) {
     <header className={'nav' + (show ? ' show' : '')}>
       <a href="#top" className="logo" onClick={(e) => { e.preventDefault(); scrollToTarget(0, { duration: 2.2 }); }}>dynamic<i>.</i>showcase</a>
       <nav aria-label="Weapons">
+        <a href="#story" onClick={(e) => { e.preventDefault(); scrollToTarget('#story', { duration: 2.2 }); }}>Story</a>
         {WEAPONS.map((w) => <a key={w.id} href={'#' + w.id} onClick={(e) => { e.preventDefault(); scrollToTarget('#' + w.id, { duration: 2.4 }); }}>{w.name}</a>)}
       </nav>
     </header>
