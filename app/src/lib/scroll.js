@@ -16,9 +16,11 @@ export function initScroll() {
   const tick = (t) => lenis.raf(t * 1000);
   gsap.ticker.add(tick);
   gsap.ticker.lagSmoothing(0);
+  const onRefresh = () => lenis.resize();
+  ScrollTrigger.addEventListener('refresh', onRefresh);
   lenis.stop();
   scroller.lenis = lenis;
-  return () => { gsap.ticker.remove(tick); lenis.destroy(); scroller.lenis = null; };
+  return () => { ScrollTrigger.removeEventListener('refresh', onRefresh); gsap.ticker.remove(tick); lenis.destroy(); scroller.lenis = null; };
 }
 
 export function scrollToTarget(target, opts = {}) {
