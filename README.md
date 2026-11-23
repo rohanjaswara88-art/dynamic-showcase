@@ -1,36 +1,67 @@
 # dynamic.showcase
 
-A scroll-driven showpiece: a katana drawn in code that comes apart as you scroll. React, GSAP, Lenis
-and [React Bits](https://reactbits.dev) components. There are no image files: every visual is vector, drawn in code.
+A scroll-driven gallery of four fantasy weapons, each drawn in code as pure vector SVG and taken apart piece by piece as
+you scroll. Each weapon has its own name and display font, its own world behind it (a WebGL shader), its own aura
+(2D canvas particles), a cursor that lights it and throws a thermal-camera heat wave, a hidden *nature* (one of the sins)
+that shows when the cursor is over it, and a lore card at the end of its scroll.
+
+React 18, GSAP + ScrollTrigger, Lenis. **There are no image files**: the weapons are SVG paths, the worlds are a fragment
+shader, the auras are generated sprites. Everything stays sharp at any zoom.
+
+| # | Weapon | Nature | Font | World |
+| --- | --- | --- | --- | --- |
+| I | **Voracity**, a scythe | Gluttony | Eater | purple hellfire |
+| II | **Halcyon**, an ice-crystal sword | Pride | Cinzel Decorative | snow blizzard |
+| III | **Eclipse**, a black sword with a red gem | Envy | Pirata One | black void under a red eclipse |
+| IV | **Avarice**, a violet greatsword | Greed | Syncopate | violet thunderstorm over lava |
 
 ## Layout
 
 | Path | What it is |
 | --- | --- |
-| `index.html`, `assets/` | The **built site**. This is what gets served (for example from GitHub Pages at `/one-man-army/`). |
+| `index.html`, `assets/` | The **built site** that gets served (for example from GitHub Pages). |
 | `app/` | The React source. |
 
 ## Develop
 
 ```powershell
-cd one-man-army/app
+cd app
 npm install
 npm run dev        # http://127.0.0.1:5180
 ```
 
+Open `http://127.0.0.1:5180/?w=2&p=0.4` to jump to weapon `w` (0 to 3) at scroll progress `p` (0 to 1) of its chapter;
+`window.__dss` exposes `go(w, p)` and the shared state for poking at things.
+
 ## Rebuild the served site
 
 ```powershell
-cd one-man-army/app
+cd app
 npm run build      # writes ../index.html and ../assets
 ```
 
-## What is where
+## What is where (`app/src`)
 
-- `app/src/components/Katana.jsx` — the katana, drawn in code as separate parts (kashira, tsuka, fuchi, tsuba,
-  seppa, habaki, blade) with a cherry-blossom branch on the blade.
-- `app/src/components/Showcase.jsx` — the scroll: hero pose, pulls apart, zooms into each part with a details panel.
-- `app/src/data/parts.js` — the text for each part.
-- `app/src/components/rb/` — React Bits components in use: SplitText, ShinyText, DecryptedText (the rest are kept for later).
-- `app/src/_archive/` — the earlier sections (brutal-quotes creed, flashlight text, numbers, finale, mountain scene),
-  parked until we add them back.
+- `lib/geom.js`: the path kit (polygons, Catmull-Rom curves, ribbons along a centre-line, thorns, seeded random).
+- `weapons/kit.jsx`: `Part`, the wrapper every weapon part uses. It adds a soft cast shadow (stacked widening strokes of the
+  part's own silhouette, no SVG filters), a cursor light overlay and an infrared heat overlay.
+- `weapons/voracity.jsx`, `halcyon.jsx`, `eclipse.jsx`, `avarice.jsx`: the four weapons, in "sword space" (long axis on +x).
+- `weapons/data.js`: names, fonts, sins, lore, per-part text and explode offsets.
+- `lib/pose.js`: fitting a weapon into screen regions (hero, exploded overview, a camera for each part, lore) for any screen.
+- `components/Chapter.jsx`: one pinned, scrubbed timeline per weapon, callouts, details panel, lore card.
+- `lib/gl.js`: the one fixed WebGL background (four worlds, crossfaded) plus the thermal heat field and rings.
+  Render scale adapts to the shader's GPU time (timer query).
+- `lib/fx.js`: the one fixed 2D canvas: auras, ambient dust, lightning, thermal rings.
+- `components/Cursor.jsx`: ring cursor, the light point, heat activity, and the nature reveal. On touch screens a scan wave
+  sweeps the weapon every few seconds instead, so the nature still appears.
+- `lib/world.js`, `lib/loop.js`: shared state and the single frame loop.
+- `components/rb/`: React Bits components in use (ShinyText, DecryptedText) and some kept for later.
+- `_archive/`: the earlier katana experience and sections, parked.
+- `app/tools/perf.js`: dev-only frame-time probe (see the file header).
+
+## Performance notes
+
+No SVG filters, no CSS blur on large layers, DPR capped at 1.5 for the canvases, particle budget about 420, parts that are
+off screen are not drawn, loops pause in hidden tabs, and `prefers-reduced-motion` gets fewer particles, no pinning and a
+static exploded diagram. The weapon is vector and is re-rasterised on every pose change, so frame cost grows with the
+area it covers; see the notes in the final report for measured numbers.
