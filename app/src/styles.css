@@ -31,7 +31,6 @@ a{color:inherit;text-decoration:none}
 /* the fixed world behind and in front of the weapons */
 .gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;background:#07050c}
 .fx{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;display:block}
-.thermal{position:fixed;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;display:block}
 main{position:relative;z-index:1}
 
 /* the chapters: one pinned stage per weapon, transparent over the fixed canvases */
@@ -92,12 +91,7 @@ main{position:relative;z-index:1}
 .lore-flow .lore{position:static;opacity:1;visibility:visible;margin:0;transform:none}
 .lore-flow .lore::before{display:none}
 
-/* thermal cursor */
-html.has-cur,html.has-cur *{cursor:none!important}
-.cur,.cur-dot{position:fixed;left:0;top:0;z-index:90;pointer-events:none;opacity:0;will-change:transform}
-.cur{width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(239,232,216,.8);transition:border-color .3s,background .3s,box-shadow .3s;mix-blend-mode:difference}
-.cur.hot{border-color:#ffb347;background:radial-gradient(circle,rgba(255,120,40,.35),rgba(255,40,80,.12) 70%,transparent);box-shadow:0 0 22px rgba(255,90,30,.55)}
-.cur-dot{width:5px;height:5px;border-radius:50%;background:#fff;mix-blend-mode:difference}
+/* nature reveal */
 .nature{position:fixed;left:0;top:0;z-index:89;pointer-events:none;opacity:0;display:flex;flex-direction:column;gap:2px;will-change:transform,opacity}
 .nature-k{font-size:10px;color:#ffd9a8;opacity:.85;letter-spacing:.3em}
 .nature-w{font-family:var(--wf);font-size:calc(clamp(2.6rem,5.4vw,5.6rem)*var(--fs));line-height:1;white-space:nowrap;color:transparent;background:linear-gradient(180deg,#fff 0,#fff3a0 18%,#ffb02e 40%,#ff4a3a 62%,#c2208c 82%,#4a1a9e 100%);background-size:100% 200%;-webkit-background-clip:text;background-clip:text;animation:heat 2.4s ease-in-out infinite alternate;filter:drop-shadow(0 0 14px rgba(255,90,30,.65))}
@@ -159,7 +153,6 @@ html.has-cur,html.has-cur *{cursor:none!important}
 .lc-cta i{font-style:normal}
 
 /* ---- the magnifying glass ---- */
-html.has-cur .landing,html.has-cur .landing *{cursor:none!important}
 .lens-frame{--ls:240px;position:fixed;left:0;top:0;z-index:85;width:var(--ls);height:var(--ls);pointer-events:none;opacity:0;will-change:transform,opacity}
 .lens{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#0a0805;border:2px solid var(--gold);box-shadow:0 0 0 7px rgba(10,8,5,.55),0 0 0 8px rgba(214,177,106,.45),0 26px 70px rgba(0,0,0,.65),inset 0 0 50px rgba(0,0,0,.6)}
 .lens::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse 52% 34% at 32% 20%,rgba(255,255,255,.2),transparent 70%),radial-gradient(circle,transparent 58%,rgba(0,0,0,.55) 100%);pointer-events:none}

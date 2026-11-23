@@ -1,22 +1,20 @@
 import { useEffect, useRef } from 'react';
-import { world, addTrail, addPulse } from '../lib/world';
+import { world } from '../lib/world';
 import { onFrame } from '../lib/loop';
 import { WEAPONS } from '../weapons/data';
 
 const SCAN_EVERY = 6.5, SCAN_LEN = 2.8, CONTACT_HOLD = 2.4;     // seconds the nature stays up after the heat last touched the weapon
 
-/** Ring cursor, the "light" point the weapon is lit from, the heat activity, and the NATURE reveal.
+/** The "light" point the weapon is lit from and the NATURE reveal. The pointer itself is the normal browser cursor.
  *  With a mouse the pointer is the light. On touch screens a scan wave sweeps the weapon every few seconds instead. */
 export default function Cursor() {
-  const ring = useRef(null), dot = useRef(null), nat = useRef(null), word = useRef(null), line = useRef(null);
+  const nat = useRef(null), word = useRef(null), line = useRef(null);
 
   useEffect(() => {
-    let contactT = -99, cx = 0, cy = 0, wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0, rx = -100, ry = -100, onWeapon = false;
-    const root = document.documentElement;
+    let contactT = -99, cx = 0, cy = 0, wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0;
     const off = onFrame((now, dt) => {
       const ctl = world.chapters[world.cur];
       const pointer = world.fine && world.mx > -9000;
-      root.classList.toggle('has-cur', world.fine);
 
       /* touch scan */
       let sx = null, sy = null;
@@ -38,17 +36,13 @@ export default function Cursor() {
       const lightT = pointer || scanning ? 1 : 0;
       world.lightOn += (lightT - world.lightOn) * (1 - Math.exp(-dt * (lightT ? 9 : 4)));
 
-      /* contact: the weapon "feels" the heat when the pointer, or the heat it just stirred, is on it */
+      /* contact: the nature shows while the pointer is on the weapon, and for a moment after */
       world.speed *= Math.exp(-dt * 3.2);
       if (now - hitT > 0.09) {
         hitT = now;
         let hitAt = null;
         if (pointer && ctl && ctl.visible) {
           if (ctl.hit(world.mx, world.my)) hitAt = [world.mx, world.my];
-          else for (let i = world.trail.length - 1; i >= 0 && i >= world.trail.length - 6 && !hitAt; i--) {
-            const q = world.trail[i], age = performance.now() / 1000 - q.t;
-            if (age < 0.8 && ctl.hit(q.x, q.y)) hitAt = [q.x, q.y];
-          }
         } else if (scanning && ctl && ctl.visible && ctl.hit(sx, sy)) hitAt = [sx, sy];
         if (hitAt) { contactT = now; cx = hitAt[0]; cy = hitAt[1]; }
         world.over = hitAt ? 'x' : null;
@@ -56,20 +50,7 @@ export default function Cursor() {
       const hot = now - contactT < CONTACT_HOLD;
       const nT = hot ? 1 : 0;
       world.nature += (nT - world.nature) * (1 - Math.exp(-dt * (nT ? 8 : 1.6)));
-      world.heat = world.nature * 0.95;
-      if (scanning && Math.floor(now * 14) !== Math.floor((now - dt) * 14)) addTrail(sx, sy, 0.85, performance.now() / 1000);
-      if (scanning && Math.floor(now * 3) !== Math.floor((now - dt) * 3)) addPulse(sx, sy, 0.8, performance.now() / 1000);
-      onWeapon = hot;
-
-      /* ring cursor */
-      if (ring.current) {
-        if (pointer) { rx += (world.mx - rx) * (1 - Math.exp(-dt * 16)); ry += (world.my - ry) * (1 - Math.exp(-dt * 16)); }
-        const show = pointer && world.cur >= 0 ? 1 : 0;
-        ring.current.style.opacity = show; dot.current.style.opacity = pointer ? 1 : 0;
-        ring.current.style.transform = `translate3d(${rx.toFixed(1)}px,${ry.toFixed(1)}px,0) translate(-50%,-50%) scale(${(1 + 0.7 * world.nature + 0.25 * world.heat).toFixed(3)})`;
-        dot.current.style.transform = `translate3d(${world.mx.toFixed(1)}px,${world.my.toFixed(1)}px,0) translate(-50%,-50%)`;
-        ring.current.classList.toggle('hot', world.nature > 0.5);
-      }
+      world.heat = 0;
 
       /* the nature word */
       if (nat.current && ctl) {
@@ -95,8 +76,6 @@ export default function Cursor() {
 
   return (
     <>
-      <div className="cur" ref={ring} aria-hidden="true" />
-      <div className="cur-dot" ref={dot} aria-hidden="true" />
       <div className="nature" ref={nat} aria-hidden="true">
         <span className="mono nature-k">Nature</span>
         <span className="nature-w" ref={word}>—</span>
