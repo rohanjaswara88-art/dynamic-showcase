@@ -59,6 +59,8 @@ function Halcyon({ reg }) {
         <Lin id="hal-bladeU" stops={[[0, '#f2fdff'], [1, '#a4dcff']]} />
         <Lin id="hal-bladeL" stops={[[0, '#86bdff'], [1, '#4a7ee0']]} />
         <Lin id="hal-gem" stops={[[0, '#bff1ff'], [0.5, '#5ab4ff'], [1, '#2b5fd6']]} x2="1" y2="1" />
+        <Lin id="hal-depth" stops={[[0, '#ffffff', 0.5], [0.22, '#ffffff', 0.05], [0.5, '#7fd8ff', 0.35], [0.78, '#1c3fb0', 0.4], [1, '#0a1c6a', 0.1]]} />
+        <Lin id="hal-sheenX" x2="1" y2="0" stops={[[0, '#ffffff', 0.55], [0.1, '#ffffff', 0.2], [0.5, '#ffffff', 0.06], [1, '#ffffff', 0.25]]} />
         <Rad id="hal-glow" stops={[[0, '#c8f6ff', 0.95], [0.35, '#5ab4ff', 0.5], [1, '#5ab4ff', 0]]} />
       </defs>
 
@@ -118,8 +120,15 @@ function Halcyon({ reg }) {
         <path d={bladeFacets.filter((f) => f.light).map((f) => f.d).join('')} fill="#fff" fillOpacity="0.14" />
         <path d={bladeFacets.filter((f) => !f.light).map((f) => f.d).join('')} fill="#0b2a8a" fillOpacity="0.1" />
         <path d={[...Array(12)].map((_, i) => { const x = 520 + i * 78; return `M${x} -44L${x + 36} 0L${x + 6} 44`; }).join('')} fill="none" stroke="#fff" strokeWidth="1" strokeOpacity="0.28" />
+        <path d={BLADE} fill="url(#hal-depth)" />
+        <path d={BLADE} fill="url(#hal-sheenX)" />
+        <path d="M470 -38L760 -6L1010 -30M520 40L820 10L1120 30M900 -34L1180 -2L1330 -18" fill="none" stroke="#fff" strokeWidth="1.1" strokeOpacity="0.5" />
+        <path d="M462 -40L1380 -22L1448 20L1380 6L462 40Z" fill="none" stroke="#e8fbff" strokeWidth="5" strokeOpacity="0.22" strokeLinejoin="round" />
         <path d={poly([[462, 0], [900, -7], [1380, -3], [1448, 20], [1380, 5], [900, 7]])} fill="#ffffff" fillOpacity="0.9" />
         <path d={poly([[462, 0], [1392, 0]], false)} stroke="#fff" strokeWidth="2.4" />
+        {[[640, -14, 15], [880, 10, 12], [1090, -8, 17], [1290, 6, 11]].map(([x, y, r], i) => (
+          <Pulse key={'g' + i} speed={1.6 + i * 0.4} phase={i * 1.7} min={0.2} max={1}><path d={`M${x - r} ${y}Q${x} ${y} ${x} ${y - r * 1.5}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r * 1.5}Q${x} ${y} ${x - r} ${y}Z`} fill="#fff" /></Pulse>
+        ))}
         {cracks.map((c, i) => <path key={i} d={poly(c, false)} fill="none" stroke="#10185a" strokeWidth="2.2" strokeOpacity="0.85" strokeLinejoin="round" />)}
         <path d={poly([...bladeTop, [1448, 20]], false)} fill="none" stroke="#fff" strokeWidth="2.4" strokeLinejoin="round" />
         <path d={poly([...bladeBot, [1360, 27], [1448, 20]], false)} fill="none" stroke="#c8e6ff" strokeWidth="1.8" strokeLinejoin="round" />

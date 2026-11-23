@@ -73,6 +73,8 @@ function Voracity({ reg }) {
         <Lin id="vor-body" stops={[[0, '#4a2478'], [0.45, '#2a1248'], [1, '#12061f']]} />
         <Lin id="vor-dark" stops={[[0, '#3c1a63'], [0.5, '#1c0b33'], [1, '#0d0418']]} />
         <Lin id="vor-bladeA" stops={[[0, '#2a1048'], [1, '#120620']]} />
+        <Lin id="vor-gloss" stops={[[0, '#ffffff', 0.34], [0.2, '#ffffff', 0.04], [0.6, '#000000', 0.3], [1, '#c24bff', 0.18]]} />
+        <Lin id="vor-streak" x2="1" y2="1" stops={[[0, '#ffffff', 0], [0.18, '#f3d9ff', 0.8], [0.6, '#d9a8ff', 0.3], [1, '#ffffff', 0]]} />
         <Rad id="vor-eye" stops={[[0, '#fff3ff'], [0.3, '#ff7cf2'], [0.7, '#c24bff', 0.7], [1, '#c24bff', 0]]} />
         <Rad id="vor-bead" stops={[[0, '#ffffff'], [0.4, '#ff6ef0'], [1, '#ff6ef0', 0]]} />
       </defs>
@@ -97,6 +99,8 @@ function Voracity({ reg }) {
       <Part {...P} id="shaft" sil={[strip(SH, 17, -17, { n: 60 })]}>
         <path d={strip(SH, 17, -17, { n: 60 })} fill="url(#vor-body)" stroke="#6a35b0" strokeWidth="1.4" />
         <path d={edge(SH, -9, { n: 60 })} fill="none" stroke="#a97cf0" strokeWidth="2" strokeOpacity="0.55" />
+        <path d={strip(SH, -3, -9, { t0: 0.02, t1: 0.98, n: 60 })} fill="#fff" fillOpacity="0.16" />
+        <path d={strip(SH, 9, 17, { n: 60 })} fill="#000" fillOpacity="0.4" />
         {[V1, V2].map((V, i) => <path key={i} d={ribbon(V, 5.5, 5.5, { n: 120 })} fill="#241040" stroke={i ? '#8a4ed8' : '#b58aff'} strokeWidth="1.3" strokeOpacity="0.8" />)}
         {thorns.map((d, i) => <path key={i} d={d} fill="#1a0a2e" stroke="#9a64e8" strokeWidth="1" />)}
         {[0.12, 0.3, 0.5, 0.68, 0.86].map((t, i) => { const c = onLine(SH, t); return <circle key={i} cx={c.x} cy={c.y} r="5" fill="url(#vor-bead)" opacity="0.8" />; })}
@@ -149,6 +153,9 @@ function Voracity({ reg }) {
           <g key={i}><path d={e.path} fill="#120620" stroke="#b98aff" strokeWidth="2.4" />
             <Pulse speed={2 + (i % 3) * 0.35} phase={i * 1.3}><path d={e.path} fill="url(#vor-eye)" transform={`translate(${e.x} ${e.y}) scale(0.82) translate(${-e.x} ${-e.y})`} /></Pulse></g>
         ))}
+        <path d={strip(BL, 0, (t) => -wB(t), { n: 70 })} fill="url(#vor-gloss)" />
+        <path d={strip(BL, (t) => -wB(t) * 0.62 + 2.5, (t) => -wB(t) * 0.62 - 2.5, { t0: 0.05, t1: 0.88, n: 50 })} fill="url(#vor-streak)" />
+        <path d={strip(BL, (t) => -wB(t), (t) => -wB(t) + 7, { n: 70 })} fill="#e6ccff" fillOpacity="0.28" />
         <path d={edge(BL, (t) => -wB(t), { n: 70 })} fill="none" stroke="#b58aff" strokeWidth="2" strokeOpacity="0.7" />
         <path d={edge(BL, (t) => wA(t), { n: 70 })} fill="none" stroke="#fff0ff" strokeWidth="2.6" strokeOpacity="0.95" strokeLinecap="round" />
       </Part>

@@ -52,12 +52,12 @@ export default function Chapter({ index, data, Art, revealed }) {
       const b = reg['body:' + p.id].getBBox();
       bb[p.id] = { x: b.x - 4, y: b.y - 4, w: b.width + 8, h: b.height + 8 };
     });
-    const pts = samplePoints(data.id, parts);
+    const pts = samplePoints(data.wid, parts);
     let maxX = 0; Object.values(bb).forEach((b) => { maxX = Math.max(maxX, b.x + b.w); });
     const pulses = [...stage.current.querySelectorAll('[data-pulse]')].map((el) => ({ kids: [...el.children], v: el.dataset.pulse.split(',').map(Number) }));
     let lastPulse = 0;
-    const silPaths = {};
-    parts.forEach((p) => { const g = document.getElementById(`s-${data.id}-${p.id}`); silPaths[p.id] = g ? [...g.querySelectorAll('path')] : []; });
+    const silPaths = {}, stableCache = {};
+    parts.forEach((p) => { const g = document.getElementById(`s-${data.wid}-${p.id}`); silPaths[p.id] = g ? [...g.querySelectorAll('path')] : []; });
     const byId = {}; parts.forEach((p, i) => { byId[p.id] = i; });
 
     /* ---------- per-frame drawing ---------- */
@@ -173,6 +173,12 @@ export default function Chapter({ index, data, Art, revealed }) {
           for (const el of silPaths[p.id]) if (el.isPointInFill(pt)) return p.id;
         }
         return null;
+      },
+      stable(ids, n) {                                  // n fixed points on the weapon (same ones every frame), in viewport pixels
+        const key = ids.join() + n;
+        if (!stableCache[key]) stableCache[key] = Array.from({ length: n }, (_, k) => { const id = ids[k % ids.length], l = pts[id]; return l ? [id, (Math.random() * l.length) | 0] : null; }).filter(Boolean);
+        const a = S.rot * D2R; void a;
+        return stableCache[key].map(([id, i]) => { const q = pts[id][i], p = parts[byId[id]], [x, y] = toScreen(S, q[0] + p.ex[0] * S.ex, q[1] + p.ex[1] * S.ex); return [x + ox, y + oy]; });
       },
       partPoint(id) { const b = bb[id], p = parts[byId[id]]; if (!b) return null; const [x, y] = toScreen(S, b.x + b.w / 2 + p.ex[0] * S.ex, b.y + b.h / 2 + p.ex[1] * S.ex); return [x + ox, y + oy]; },
       axisPoint(u) { const [x, y] = toScreen(S, maxX * u, 0); return [x + ox, y + oy]; },

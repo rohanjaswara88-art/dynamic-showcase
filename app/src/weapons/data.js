@@ -3,7 +3,7 @@
    `side` is which side of the part its callout sits on. `focus` (optional) is a window [x, y, w] in sword space to zoom to instead of the whole part. */
 export const WEAPONS = [
   {
-    id: 'voracity', name: 'VORACITY', font: "'Eater', 'Impact', sans-serif", fontScale: 1, sin: 'GLUTTONY', sinLine: 'It cuts to feed.',
+    id: 'voracity', wid: 'vor', name: 'VORACITY', font: "'Eater', 'Impact', sans-serif", fontScale: 1, sin: 'GLUTTONY', sinLine: 'It cuts to feed.',
     kicker: 'I / IV · Purple hellfire', tagline: 'It was never made to harvest. It was made to feed.',
     env: 0, ac: '#ff6ef0', glow: '#ff6ef0', glow2: '#c24bff', hero: { land: -132, port: -104 }, over: { land: 0, port: -90 },
     lore: {
@@ -36,9 +36,9 @@ export const WEAPONS = [
     ]
   },
   {
-    id: 'halcyon', name: 'HALCYON', font: "'Cinzel Decorative', 'Cinzel', serif", fontScale: 0.82, sin: 'PRIDE', sinLine: 'It will not bow.',
+    id: 'halcyon', wid: 'hal', name: 'HALCYON', font: "'Cinzel Decorative', 'Cinzel', serif", fontScale: 0.82, sin: 'PRIDE', sinLine: 'It will not bow.',
     kicker: 'II / IV · Snow blizzard', tagline: 'Calm as a frozen lake. Cold as what lies beneath it.',
-    env: 1, ac: '#aef0ff', glow: '#9fdcff', glow2: '#b9a8ff', hero: { land: -58, port: -80 }, over: { land: 0, port: -90 },
+    env: 1, ac: '#f2fbff', glow: '#9fdcff', glow2: '#b9a8ff', hero: { land: -58, port: -80 }, over: { land: 0, port: -90 },
     lore: {
       found: 'The Mirror Cavern under Mount Vael, frozen into the ceiling point down above a lake that has never moved.',
       owner: 'Sovereign Aurelian Vael, the Unbowed, who refused to kneel even to a winter.',
@@ -69,7 +69,7 @@ export const WEAPONS = [
     ]
   },
   {
-    id: 'eclipse', name: 'ECLIPSE', font: "'Pirata One', 'Impact', serif", fontScale: 1.1, sin: 'ENVY', sinLine: 'It wants what you hold.',
+    id: 'eclipse', wid: 'ecl', name: 'ECLIPSE', font: "'Pirata One', 'Impact', serif", fontScale: 1.1, sin: 'ENVY', sinLine: 'It wants what you hold.',
     kicker: 'III / IV · The black void', tagline: 'It wants what the light has.',
     env: 2, ac: '#ff2a2a', glow: '#ff2a2a', glow2: '#ff8a4a', hero: { land: -52, port: -78 }, over: { land: 0, port: -90 },
     lore: {
@@ -102,7 +102,7 @@ export const WEAPONS = [
     ]
   },
   {
-    id: 'avarice', name: 'AVARICE', font: "'Syncopate', 'Arial Black', sans-serif", fontScale: 0.74, sin: 'GREED', sinLine: 'It takes more than it needs.',
+    id: 'avarice', wid: 'ava', name: 'AVARICE', font: "'Syncopate', 'Arial Black', sans-serif", fontScale: 0.74, sin: 'GREED', sinLine: 'It takes more than it needs.',
     kicker: 'IV / IV · Violet thunderstorm', tagline: 'Everything within reach, and then a little further.',
     env: 3, ac: '#d9b8ff', glow: '#b07bff', glow2: '#e8d0ff', hero: { land: -48, port: -76 }, over: { land: 0, port: -90 },
     lore: {

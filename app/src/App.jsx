@@ -9,6 +9,7 @@ import Gallery from './components/Gallery.jsx';
 import Cursor from './components/Cursor.jsx';
 import { startGL } from './lib/gl';
 import { startFX } from './lib/fx';
+import { startThermal } from './lib/thermal';
 
 export default function App() {
   const [revealed, setRevealed] = useState(false);
@@ -22,7 +23,8 @@ export default function App() {
     const stopFrames = onFrame((t, dt) => { world.frames && world.frames.forEach((fn) => fn(t, dt)); });
     const stopGL = startGL(document.getElementById('gl'));
     const stopFX = startFX(document.getElementById('fx'));
-    return () => { window.removeEventListener('load', refresh); stopScroll(); stopPtr(); stopFrames(); stopGL(); stopFX(); };
+    const stopTh = startThermal(document.getElementById('thermal'));
+    return () => { window.removeEventListener('load', refresh); stopScroll(); stopPtr(); stopFrames(); stopGL(); stopFX(); stopTh(); };
   }, []);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function App() {
         <footer className="foot mono"><span>© 2026 dynamic.showcase</span><span>Four weapons. More soon.</span></footer>
       </main>
       <canvas id="fx" className="fx" aria-hidden="true" />
+      <canvas id="thermal" className="thermal" aria-hidden="true" />
       <Cursor />
     </>
   );

@@ -10,6 +10,10 @@ const BL = makeLine(bez2([600, 0], [1150, 60], [1560, -190], 80), 220);
 const W = (t) => 104 * Math.pow(1 - t, 0.72) * Math.min(1, 0.6 + t * 6);
 const BLADE = ribbon(BL, W, W, { n: 70 });
 const BLADE_UP = strip(BL, 0, (t) => -W(t), { n: 70 });
+const BEV_TOP = strip(BL, (t) => -W(t), (t) => -W(t) + 8 * (1 - t * 0.5), { n: 70 }), BEV_BOT = strip(BL, (t) => W(t) - 8 * (1 - t * 0.5), (t) => W(t), { n: 70 });
+const STREAK = strip(BL, (t) => -W(t) * 0.62 - 2.4, (t) => -W(t) * 0.62 + 2.4, { t0: 0.06, t1: 0.92, n: 50 });
+const scr = (n, seed) => { const r = rng(seed); let d = ''; for (let i = 0; i < n; i++) { const t = 0.03 + r() * 0.9, c = onLine(BL, t, (r() * 2 - 1) * W(t) * 0.8), l = 16 + r() * 80; d += `M${c.x.toFixed(1)} ${c.y.toFixed(1)}l${(Math.cos(c.ang) * l).toFixed(1)} ${(Math.sin(c.ang) * l + (r() - 0.5) * 3).toFixed(1)}`; } return d; };
+const SCRATCH = scr(44, 77);
 
 /* lightning veins: a wandering main vein and branches, kept inside the blade */
 function nearest(x, y) { let b = 0, bd = 1e9; BL.p.forEach(([px, py], i) => { const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; b = i; } }); return { t: b / (BL.p.length - 1), d: Math.sqrt(bd) }; }
@@ -62,8 +66,11 @@ function Avarice({ reg }) {
       <defs>
         <Lin id="ava-body" stops={[[0, '#5a2fb8'], [0.45, '#2a1070'], [1, '#0d0620']]} />
         <Lin id="ava-dark" stops={[[0, '#3a1c8a'], [1, '#0a0418']]} />
-        <Lin id="ava-bladeU" stops={[[0, '#6a3cd0'], [1, '#2a1074']]} />
-        <Lin id="ava-bladeL" stops={[[0, '#1e0c52'], [1, '#08031a']]} />
+        <Lin id="ava-bladeU" stops={[[0, '#8a5cf0'], [0.35, '#4a22a8'], [1, '#1e0a58']]} />
+        <Lin id="ava-bladeL" stops={[[0, '#26105f'], [0.55, '#0c0424'], [1, '#2a0f5a']]} />
+        <Lin id="ava-env" stops={[[0, '#ffffff', 0], [0.12, '#e8d8ff', 0.3], [0.24, '#ffffff', 0.03], [0.55, '#000000', 0.28], [0.85, '#b07bff', 0.22], [1, '#b07bff', 0]]} />
+        <Lin id="ava-streak" x2="1" y2="0" stops={[[0, '#ffffff', 0], [0.12, '#f0e4ff', 0.9], [0.55, '#d9b8ff', 0.4], [1, '#ffffff', 0]]} />
+        <Lin id="ava-sheen" x2="1" y2="0" stops={[[0, '#ffffff', 0], [0.06, '#ffffff', 0.18], [0.35, '#ffffff', 0.05], [1, '#ffffff', 0]]} />
         <Lin id="ava-cord" stops={[[0, '#9a98a8'], [0.5, '#5c5a68'], [1, '#2a2832']]} />
         <Rad id="ava-eye" stops={[[0, '#ffffff'], [0.25, '#e8d0ff'], [0.55, '#9a5cff', 0.85], [1, '#6a2cff', 0]]} />
         <Rad id="ava-halo" stops={[[0, '#b07bff', 0.8], [0.5, '#b07bff', 0.25], [1, '#b07bff', 0]]} />
@@ -111,7 +118,12 @@ function Avarice({ reg }) {
         {[[48, 0.04], [24, 0.07]].map(([w, o]) => <path key={w} d={veinD(veins[0])} fill="none" stroke="#b07bff" strokeWidth={w} strokeOpacity={o} strokeLinecap="round" strokeLinejoin="round" />)}
         <path d={BLADE} fill="url(#ava-bladeL)" />
         <path d={BLADE_UP} fill="url(#ava-bladeU)" />
-        <path d={BLADE_UP} fill="url(#ava-bladeU)" fillOpacity="0" />
+        <path d={BLADE} fill="url(#ava-env)" />
+        <path d={BLADE} fill="url(#ava-sheen)" />
+        <path d={BEV_TOP} fill="#f0e4ff" fillOpacity="0.32" />
+        <path d={BEV_BOT} fill="#000" fillOpacity="0.5" />
+        <path d={SCRATCH} fill="none" stroke="#e0d0ff" strokeWidth="0.7" strokeOpacity="0.18" />
+        <path d={STREAK} fill="url(#ava-streak)" />
         <path d={edge(BL, (t) => -W(t) * 0.5, { t0: 0.02, t1: 0.9 })} fill="none" stroke="#9a64f0" strokeWidth="1.2" strokeOpacity="0.4" />
         <Pulse speed={3.2} min={0.55} max={1}>
           {veinGroups.map((g) => <path key={'b' + g.depth} d={g.d} fill="none" stroke="#9a5cff" strokeWidth={16 - g.depth * 4} strokeOpacity="0.22" strokeLinecap="round" strokeLinejoin="round" />)}

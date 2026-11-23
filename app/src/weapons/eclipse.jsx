@@ -44,6 +44,11 @@ const flecks = [...Array(60)].map(() => {
   const t = 0.02 + R() * 0.9, x = 640 + t * 920, y = (R() * 2 - 1) * W(t) * 0.85, s = 4 + R() * 11, a = R() * 3;
   return { d: poly([[x, y], [x + Math.cos(a) * s, y + Math.sin(a) * s], [x + Math.cos(a + 2) * s * 0.7, y + Math.sin(a + 2) * s * 0.7]]), o: 0.07 + R() * 0.16, dark: R() > 0.5 };
 });
+const scr = (n, seed) => { const r = rng(seed); let d = ''; for (let i = 0; i < n; i++) { const t = 0.03 + r() * 0.9, x = 640 + t * 920, y = (r() * 2 - 1) * W(t) * 0.8, l = 20 + r() * 90; d += `M${x.toFixed(1)} ${y.toFixed(1)}l${l.toFixed(1)} ${((r() - 0.5) * 4).toFixed(1)}`; } return d; };
+const SCRATCH_L = scr(46, 91), SCRATCH_D = scr(30, 92);
+const BEV_TOP = strip(BL, (t) => W(t), (t) => W(t) - 7 * (1 - t * 0.5), { n: 64 }), BEV_BOT = strip(BL, (t) => -W(t) + 7 * (1 - t * 0.5), (t) => -W(t), { n: 64 });
+const STREAK = strip(BL, (t) => -W(t) * 0.5 - 2.2, (t) => -W(t) * 0.5 + 2.2, { t0: 0.07, t1: 0.9, n: 40 });
+const STREAK2 = strip(BL, (t) => W(t) * 0.55 - 1.6, (t) => W(t) * 0.55 + 1.6, { t0: 0.1, t1: 0.7, n: 40 });
 const cracks = [[[700, -60], [740, -36], [770, -58], [820, -30], [850, -40]], [[720, 50], [770, 32], [790, 60], [850, 44]], [[900, -20], [940, 4], [972, -8], [1030, 18]], [[1040, 40], [1080, 28], [1100, 46]]];
 
 function Eclipse({ reg }) {
@@ -54,8 +59,12 @@ function Eclipse({ reg }) {
       <defs>
         <Lin id="ecl-steel" stops={[[0, '#4a4a56'], [0.45, '#1c1c22'], [1, '#08080b']]} />
         <Lin id="ecl-steelX" x2="1" y2="0" stops={[[0, '#2b2b33'], [0.5, '#4c4c58'], [1, '#17171c']]} />
-        <Lin id="ecl-bladeU" stops={[[0, '#40404c'], [1, '#17171d']]} />
-        <Lin id="ecl-bladeL" stops={[[0, '#14141a'], [1, '#050507']]} />
+        <Lin id="ecl-bladeU" stops={[[0, '#52525e'], [0.3, '#2a2a33'], [1, '#121217']]} />
+        <Lin id="ecl-bladeL" stops={[[0, '#16161c'], [0.55, '#09090c'], [1, '#2c0a10']]} />
+        <Lin id="ecl-sheen" x2="1" y2="0" stops={[[0, '#ffffff', 0], [0.06, '#ffffff', 0.2], [0.3, '#ffffff', 0.07], [0.75, '#ffffff', 0.02], [1, '#ffffff', 0]]} />
+        <Lin id="ecl-env" stops={[[0, '#ffffff', 0], [0.12, '#ffffff', 0.15], [0.22, '#ffffff', 0.02], [0.55, '#000000', 0.25], [0.84, '#ff3a2a', 0.2], [1, '#ff3a2a', 0]]} />
+        <Lin id="ecl-streak" x2="1" y2="0" stops={[[0, '#ffffff', 0], [0.12, '#ffffff', 0.85], [0.55, '#ffffff', 0.35], [1, '#ffffff', 0]]} />
+        <Lin id="ecl-ao" x2="1" y2="0" stops={[[0, '#000000', 0.7], [0.1, '#000000', 0], [1, '#000000', 0]]} />
         <Rad id="ecl-gem" stops={[[0, '#fff0e8'], [0.25, '#ff4a3a'], [0.7, '#c4101c'], [1, '#6a0510']]} cx="0.4" cy="0.35" r="0.7" />
         <Rad id="ecl-halo" stops={[[0, '#ff2a2a', 0.85], [0.4, '#ff2a2a', 0.3], [1, '#ff2a2a', 0]]} />
       </defs>
@@ -84,6 +93,8 @@ function Eclipse({ reg }) {
         <path d={poly([[470, -34], [520, -58], [600, -40], [700, -8], [708, 0], [560, 0], [452, 0]])} fill="#fff" fillOpacity="0.09" />
         <path d={poly([[452, 0], [520, -22], [640, -12], [704, 0]], false)} stroke={RIM} strokeWidth="1.4" strokeOpacity="0.55" fill="none" />
         <path d={CREST} fill="none" stroke={RIM} strokeWidth="1.2" strokeOpacity="0.5" strokeLinejoin="round" />
+        <path d="M470 -30L520 -54L600 -37L690 -8" fill="none" stroke="#fff" strokeWidth="1.6" strokeOpacity="0.5" strokeLinecap="round" />
+        <path d="M470 30L520 54L600 37L690 8" fill="none" stroke="#000" strokeWidth="3" strokeOpacity="0.45" strokeLinecap="round" />
         <path d={poly([[486, -20], [510, -30], [530, -22]], false)} stroke="#a5a5b8" strokeWidth="1.2" fill="none" strokeOpacity="0.6" />
       </Part>
 
@@ -91,6 +102,8 @@ function Eclipse({ reg }) {
         <Pulse speed={1.3} min={0.4} max={1}><circle cx="568" cy="0" r="86" fill="url(#ecl-halo)" /></Pulse>
         <path d={GEM} transform="translate(568 0) scale(1.25) translate(-568 0)" fill="#2a0508" stroke="#7d8090" strokeWidth="1.6" />
         <path d={GEM} fill="url(#ecl-gem)" stroke="#ffb0a0" strokeWidth="1.2" />
+        <path d="M548 -23L575 0L548 23M575 0L612 0M548 -23L596 -3M548 23L596 3" fill="none" stroke="#ffd0c4" strokeWidth="0.9" strokeOpacity="0.4" />
+        <path d="M548 0L612 0Q584 26 548 23Z" fill="#3a0006" fillOpacity="0.42" />
         <path d="M556 -15Q580 -12 596 -2" fill="none" stroke="#fff" strokeWidth="2.4" strokeOpacity="0.8" strokeLinecap="round" />
         <Pulse speed={1.3} min={0.35} max={0.9}><ellipse cx="554" cy="-4" rx="9" ry="6" fill="#fff" /></Pulse>
       </Part>

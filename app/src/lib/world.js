@@ -3,7 +3,7 @@ import { finePointer, reduceMotion } from './anim';
 /* Shared, mutable state that the canvases, the weapon stage and the cursor all read.
    Positions are viewport pixels. */
 export const world = {
-  cur: 0,                         // active chapter (drives environment + aura)
+  cur: -1,                        // active chapter (drives environment + aura)
   fine: true, reduce: false,
   mx: -9999, my: -9999,           // raw pointer
   px: -9999, py: -9999,           // smoothed pointer
@@ -15,6 +15,7 @@ export const world = {
   chapters: [], go: {},                   // per-chapter controllers (see Chapter.jsx)
   flash: 0,                       // lightning flash, 0..1
   lastMove: 0,
+  tint: [0.55, 0.42, 0.2],        // colour the landing fog leans toward
 };
 
 const MAX_TRAIL = 16, MAX_PULSE = 4;

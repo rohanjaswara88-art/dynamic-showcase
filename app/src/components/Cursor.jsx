@@ -3,7 +3,7 @@ import { world, addTrail, addPulse } from '../lib/world';
 import { onFrame } from '../lib/loop';
 import { WEAPONS } from '../weapons/data';
 
-const SCAN_EVERY = 6.5, SCAN_LEN = 2.8;
+const SCAN_EVERY = 6.5, SCAN_LEN = 2.8, CONTACT_HOLD = 2.4;     // seconds the nature stays up after the heat last touched the weapon
 
 /** Ring cursor, the "light" point the weapon is lit from, the heat activity, and the NATURE reveal.
  *  With a mouse the pointer is the light. On touch screens a scan wave sweeps the weapon every few seconds instead. */
@@ -11,7 +11,7 @@ export default function Cursor() {
   const ring = useRef(null), dot = useRef(null), nat = useRef(null), word = useRef(null), line = useRef(null);
 
   useEffect(() => {
-    let wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0, rx = -100, ry = -100, onWeapon = false;
+    let contactT = -99, cx = 0, cy = 0, wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0, rx = -100, ry = -100, onWeapon = false;
     const root = document.documentElement;
     const off = onFrame((now, dt) => {
       const ctl = world.chapters[world.cur];
@@ -38,26 +38,28 @@ export default function Cursor() {
       const lightT = pointer || scanning ? 1 : 0;
       world.lightOn += (lightT - world.lightOn) * (1 - Math.exp(-dt * (lightT ? 9 : 4)));
 
-      /* heat: how much the pointer has been moving lately */
+      /* contact: the weapon "feels" the heat when the pointer, or the heat it just stirred, is on it */
       world.speed *= Math.exp(-dt * 3.2);
-      const hT = scanning ? 0.75 : Math.min(1, world.speed / 700);
-      world.heat = hT > world.heat ? world.heat + (hT - world.heat) * (1 - Math.exp(-dt * 10)) : world.heat * Math.exp(-dt * 1.15);
-      if (scanning) {
-        if (Math.floor(now * 14) !== Math.floor((now - dt) * 14)) addTrail(sx, sy, 0.85, now);
-        if (Math.floor(now * 3) !== Math.floor((now - dt) * 3)) addPulse(sx, sy, 0.8, now);
-      }
-
-      /* is it on the weapon? (about 10 times a second) */
-      if (now - hitT > 0.1) {
+      if (now - hitT > 0.09) {
         hitT = now;
-        if (pointer) {
-          world.over = ctl && ctl.visible ? ctl.hit(world.mx, world.my) : null;
-        } else if (scanning) world.over = ctl.data.parts[0].id;
-        else world.over = null;
+        let hitAt = null;
+        if (pointer && ctl && ctl.visible) {
+          if (ctl.hit(world.mx, world.my)) hitAt = [world.mx, world.my];
+          else for (let i = world.trail.length - 1; i >= 0 && i >= world.trail.length - 6 && !hitAt; i--) {
+            const q = world.trail[i], age = performance.now() / 1000 - q.t;
+            if (age < 0.8 && ctl.hit(q.x, q.y)) hitAt = [q.x, q.y];
+          }
+        } else if (scanning && ctl && ctl.visible && ctl.hit(sx, sy)) hitAt = [sx, sy];
+        if (hitAt) { contactT = now; cx = hitAt[0]; cy = hitAt[1]; }
+        world.over = hitAt ? 'x' : null;
       }
-      onWeapon = !!world.over && (pointer || scanning);
-      const nT = onWeapon ? 1 : 0;
-      world.nature += (nT - world.nature) * (1 - Math.exp(-dt * (nT ? 7 : 3.2)));
+      const hot = now - contactT < CONTACT_HOLD;
+      const nT = hot ? 1 : 0;
+      world.nature += (nT - world.nature) * (1 - Math.exp(-dt * (nT ? 8 : 1.6)));
+      world.heat = world.nature * 0.95;
+      if (scanning && Math.floor(now * 14) !== Math.floor((now - dt) * 14)) addTrail(sx, sy, 0.85, performance.now() / 1000);
+      if (scanning && Math.floor(now * 3) !== Math.floor((now - dt) * 3)) addPulse(sx, sy, 0.8, performance.now() / 1000);
+      onWeapon = hot;
 
       /* ring cursor */
       if (ring.current) {
@@ -82,7 +84,7 @@ export default function Cursor() {
         if (a <= 0.003) wasHidden = true;
         if (a > 0.003) {
           if (wasHidden) { natW = nat.current.offsetWidth; wasHidden = false; }
-          const ax = scanning ? sx : world.px, ay = scanning ? sy : world.py, w = natW || 240;
+          const ax = cx, ay = cy, w = natW || 240;
           const x = !pointer ? (vw - w) / 2 : Math.min(vw - w - 12, Math.max(12, ax + 30)), y = !pointer ? vh * 0.2 : Math.min(vh - 120, Math.max(70, ay - 70));
           nat.current.style.transform = `translate3d(${x.toFixed(1)}px,${(y + (1 - a) * 10).toFixed(1)}px,0) scale(${(0.94 + 0.06 * a).toFixed(3)})`;
         }
