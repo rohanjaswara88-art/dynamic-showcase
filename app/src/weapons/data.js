@@ -24,13 +24,13 @@ export const WEAPONS = [
       { id: 'upbind', name: 'Upper Binding', title: 'Throat wrap', ex: [80, 170], side: 'down',
         role: 'Where the haft meets the head, the strands thicken and pull the crown down onto the shaft like a throat swallowing.',
         material: 'Thorn vine, ember glass at every crossing.', spec: [['Weave', 'Double helix, two turns'], ['Load', 'Holds the whole head on'], ['Glow', 'Brightens with use']] },
-      { id: 'ring', name: 'Maw Ring', title: 'Hunger ring', ex: [150, -210], side: 'up',
+      { id: 'ring', name: 'Maw Ring', title: 'Hunger ring', ex: [120, -250], side: 'up',
         role: 'A ring at the throat of the head. Three eyelets burn pink where the hunger shows through. It is the weapon’s mouth and it is never closed.',
         material: 'Dark alloy, rimmed with lit glass.', spec: [['Eyelets', 'Three, always burning'], ['Opening', 'A hand wide'], ['Voice', 'Hums when it is near food']] },
-      { id: 'mantle', name: 'Mantle', title: 'Spined crown', ex: [60, -130], side: 'up',
+      { id: 'mantle', name: 'Mantle', title: 'Spined crown', ex: [380, -70], side: 'up',
         role: 'Layered plates armour the root of the blade, and long thorns rake backward from the ring. They hook what the blade opens and keep it.',
         material: 'Overlapping black plates, violet rim light.', spec: [['Plates', 'Three, shingled'], ['Thorns', 'Eight, the longest a forearm'], ['Weight', 'Balances the blade']] },
-      { id: 'blade', name: 'Crescent Blade', title: 'Hooked blade', ex: [260, 40], side: 'down',
+      { id: 'blade', name: 'Crescent Blade', title: 'Hooked blade', ex: [190, 150], side: 'down',
         role: 'A hooked blade whose outer edge is dark and spined and whose inner edge burns. It cuts on the inside curve, and that glow is the edge feeding.',
         material: 'Dark iron with a core of molten violet glass.', spec: [['Reach', 'One long sweep'], ['Edge', 'Inner curve, lit'], ['Eyelets', 'Six, one per feeding']] }
     ]

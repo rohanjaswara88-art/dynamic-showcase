@@ -57,10 +57,10 @@ export default function Chapter3D({ index, data, revealed }) {
         : { hero: [0.5, 0.48, 0.86, 0.66], over: [0.5, 0.5, 0.5, 0.8], focus: [0.5, 0.27, 0.84, 0.4], lore: [0.5, 0.27, 0.8, 0.4] };
       const place = (reg, f) => ({ ...f, offx: W / 2 - reg[0] * W, offy: H / 2 - reg[1] * H });
       const whole = pointsFor(ids, 0), apart = pointsFor(ids, 1);
-      const heroRoll = land ? -0.5 : -0.2, overRoll = land ? -Math.PI / 2 : 0;
-      const hero = { roll: heroRoll, spin: 0.55, yaw: 0.12, pitch: 0.12, ...place(R.hero, fit(whole, heroRoll, 0.55, 0.12, 0.12, R.hero[2], R.hero[3])) };
+      const heroRoll = land ? -0.38 : -0.2, overRoll = land ? -Math.PI / 2 : 0;
+      const hero = { roll: heroRoll, spin: 0.12, yaw: 0.06, pitch: 0.08, ...place(R.hero, fit(whole, heroRoll, 0.12, 0.06, 0.08, R.hero[2], R.hero[3])) };
       const over = { roll: overRoll, spin: 0, yaw: 0, pitch: 0.06, ...place(R.over, fit(apart, overRoll, 0, 0, 0.06, R.over[2], R.over[3])) };
-      const lore = { roll: heroRoll, spin: 0.4, yaw: 0.1, pitch: 0.1, ...place(R.lore, fit(whole, heroRoll, 0.4, 0.1, 0.1, R.lore[2], R.lore[3])) };
+      const lore = { roll: heroRoll, spin: 0.2, yaw: 0.06, pitch: 0.08, ...place(R.lore, fit(whole, heroRoll, 0.2, 0.06, 0.08, R.lore[2], R.lore[3])) };
       const cams = parts.map((p, i) => {
         const spin = (i % 2 ? -0.3 : 0.3), f = fit(st3.corners(p.id, 1), overRoll, spin, 0.05, 0.1, R.focus[2] * 0.62, R.focus[3] * 0.62, 0.7);
         return { roll: overRoll, spin, yaw: 0.05, pitch: 0.1, ...place(R.focus, f) };
@@ -76,7 +76,7 @@ export default function Chapter3D({ index, data, revealed }) {
       /* a slow turntable swing while the weapon is whole, plus whatever the visitor dragged */
       drag *= Math.exp(-(dt || 0.016) * 0.9); dragP *= Math.exp(-(dt || 0.016) * 0.9);
       const calm = Math.max(S.hero, S.lore) * (1 - S.ex);
-      const S2 = { ...S, spin: S.spin + Math.sin(t * 0.5) * 0.45 * calm + Math.sin(t * 0.35) * 0.12 * S.fm + drag, pitch: S.pitch + dragP };
+      const S2 = { ...S, spin: S.spin + Math.sin(t * 0.5) * 0.3 * calm + Math.sin(t * 0.35) * 0.12 * S.fm + drag, pitch: S.pitch + dragP };
       st3.apply(S2, activeNow >= 0 && S.fm > 0.5 ? parts[activeNow].id : null, t);
       /* the pointer lights the metal */
       const lx = (world.px - ox) / W * 2 - 1, ly = -((world.py - oy) / H) * 2 + 1;

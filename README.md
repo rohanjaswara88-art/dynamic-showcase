@@ -72,15 +72,16 @@ area it covers; see the notes in the final report for measured numbers.
 
 ## 3D models (Blender)
 
-`models/voracity/` holds the first 3D relic, the scythe, built entirely from a script so it can be re-run and tuned:
+`models/voracity/` holds the first 3D relic, the scythe, built entirely from a script so it can be re-run and tuned. The model follows a reference drawing: a bowed shaft with a double-twist throat, an almond talon at the foot, a wide crescent blade whose inner face burns, three ranks of sharp crest plates along its back, and a horned bone ring. Same 7 parts as the site:
 
 | File | What it is |
 | --- | --- |
 | `build_voracity.py` | Builds the model, materials, lights, camera and animation in Blender (5.2). Same 7 parts as the site. |
 | `voracity.blend` | The built scene (open it in Blender). |
 | `voracity.glb` | The model with its spin and pull-apart animation, for the web. |
-| `still_*.png`, `voracity_turntable.mp4` | Cycles (path-traced) stills and a 12 second loop: the scythe floats and spins, pulls apart into its parts and comes back together. |
+| `ref_view.png`, `still_*.png` | Cycles (path-traced) renders: a face-on view leaning like the reference, and two frames of the animation. |
 
 ```powershell
-& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- ref 96 1000 1250      # face-on render (ref_view.png)
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim     # the 12 second loop (slow)
 ```

@@ -8,11 +8,11 @@ const K = 1 / 700, FOV = 30;
 
 /* what each Blender material becomes in the browser (Blender's procedural scratches and glow do not travel in a .glb) */
 const LOOK = {
-  Voracity_ForgedMetal: { color: 0x6a5a88, metalness: 0.95, roughness: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.15 },
-  Voracity_Plate: { color: 0x7a5aa8, metalness: 0.92, roughness: 0.26, clearcoat: 0.55, clearcoatRoughness: 0.1 },
-  Voracity_BlackIron: { color: 0x40345a, metalness: 0.85, roughness: 0.4 },
-  Voracity_Vine: { color: 0x4a2c72, metalness: 0.4, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.3 },
-  Voracity_Blade: { color: 0x34205a, metalness: 0.92, roughness: 0.24, clearcoat: 0.5, clearcoatRoughness: 0.06 },
+  Voracity_ForgedMetal: { color: 0x3c3254, metalness: 0.95, roughness: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.15 },
+  Voracity_Plate: { color: 0x3a2a5a, metalness: 0.92, roughness: 0.26, clearcoat: 0.55, clearcoatRoughness: 0.1 },
+  Voracity_BlackIron: { color: 0x241a38, metalness: 0.85, roughness: 0.4 },
+  Voracity_Vine: { color: 0x30204e, metalness: 0.4, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.3 },
+  Voracity_Blade: { color: 0x1e1236, metalness: 0.92, roughness: 0.24, clearcoat: 0.5, clearcoatRoughness: 0.06 },
   Voracity_Eyelet: { color: 0x200a1c, metalness: 0, roughness: 0.3, emissive: 0xff4de6, glow: 2.6 },
   Voracity_RingGlow: { color: 0x200a1c, metalness: 0, roughness: 0.3, emissive: 0xff4ae0, glow: 2.0 },
   Voracity_VioletGlass: { color: 0x14082a, metalness: 0, roughness: 0.1, emissive: 0x8a2bff, glow: 1.2 }
@@ -23,7 +23,7 @@ function lookFor(m) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: spec.color, metalness: spec.metalness, roughness: spec.roughness,
     clearcoat: spec.clearcoat || 0, clearcoatRoughness: spec.clearcoatRoughness ?? 0.1,
-    emissive: spec.emissive || 0x000000, emissiveIntensity: spec.glow || 0, envMapIntensity: 2.4
+    emissive: spec.emissive || 0x000000, emissiveIntensity: spec.glow || 0, envMapIntensity: 1.6
   });
   mat.userData.glow = spec.glow || 0;
   return mat;
@@ -81,9 +81,11 @@ export function createStage(canvas, partIds, exOffsets) {
         const box = new THREE.Box3().setFromObject(node); api.boxes[id] = box; total.union(box);
         const pts = [];
         node.traverse((o) => {
-          if (o.isMesh) {
+          if (o.isMesh && !o.userData.skin) {          // (the glow skin added below is a child, and the traversal would reach it)
             api.meshes.push(o); o.userData.part = id;
             const old = o.material; o.material = lookFor(old); o.material.name = old.name;
+            const glowCol = o.geometry.attributes.color_1;          // Blender exports its default white colour as COLOR_0 and the painted glow as COLOR_1
+            if (glowCol) o.geometry.setAttribute('color', glowCol);
             if (old.name === 'Voracity_Blade' && o.geometry.attributes.color) {          // the burning inner edge: vertex colours painted in Blender, added as light
               const skin = new THREE.Mesh(o.geometry, new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
               skin.userData.skin = true; o.add(skin); api.glow.push(skin.material);
@@ -103,6 +105,7 @@ export function createStage(canvas, partIds, exOffsets) {
     }, undefined, reject);
   });
   api.loading = loading;
+  if (import.meta.env && import.meta.env.DEV) window.__stage3 = { api, scene };
 
   const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _m = new THREE.Matrix4();
   const ray = new THREE.Raycaster();
@@ -134,13 +137,13 @@ export function createStage(canvas, partIds, exOffsets) {
     camera.setViewOffset(W, H, S.offx, S.offy, W, H);
     camera.updateMatrixWorld(true);
     const pulse = 0.72 + 0.28 * Math.sin(time * 2.4) + 0.08 * Math.sin(time * 5.7);
-    for (const m of api.glow) { if (m.isMeshBasicMaterial) m.color.setScalar((0.55 + 0.45 * pulse) * 2.4); else m.emissiveIntensity = m.userData.glow * pulse; }
+    for (const m of api.glow) { if (m.isMeshBasicMaterial) m.color.setScalar((0.55 + 0.45 * pulse) * 1.35); else m.emissiveIntensity = m.userData.glow * pulse; }
     rim1.intensity = 140 * (0.8 + 0.3 * Math.sin(time * 1.7)); rim2.intensity = 90 * (0.85 + 0.25 * Math.sin(time * 1.3 + 2));
   };
 
   /** a light that follows the pointer, so the metal catches it */
   api.pointerLight = (nx, ny, amount, target) => {
-    cursorLight.intensity = 90 * amount;
+    cursorLight.intensity = 40 * amount;
     _v.set(nx, ny, 0.3).unproject(camera);
     const dir = _v.sub(camera.position).normalize();
     cursorLight.position.copy(camera.position).addScaledVector(dir, Math.max(0.6, camera.position.distanceTo(target) * 0.62));

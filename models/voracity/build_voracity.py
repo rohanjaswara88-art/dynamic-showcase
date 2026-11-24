@@ -14,7 +14,9 @@ from mathutils import Vector, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-K = 1 / 700.0
+SC = 0.002                              # metres per reference pixel
+K = SC
+KE = 1 / 700.0                          # the site's explode unit
 FPS, END = 30, 360                      # a 12 second loop
 random.seed(7)
 
@@ -26,6 +28,10 @@ scene.frame_start, scene.frame_end = 1, END
 
 def P(sx, sy, d=0.0):
     return Vector((sy * K, d, sx * K))
+
+
+def Q(s, c, d=0.0):
+    return Vector((c * SC, d * SC, s * SC))
 
 
 def link(obj, parent=None):
@@ -111,8 +117,8 @@ def glow(name, color, strength, rough=0.25):
     return m
 
 
-M_METAL = metal('Voracity_ForgedMetal', (0.045, 0.03, 0.07), coat=0.2, rough=(0.16, 0.42), scale=(50, 50, 5), bump=0.22)
-M_PLATE = metal('Voracity_Plate', (0.06, 0.035, 0.095), coat=0.45, rough=(0.14, 0.36), scale=(40, 40, 8), bump=0.3, bevel=0.003)
+M_METAL = metal('Voracity_ForgedMetal', (0.045, 0.03, 0.07), coat=0.15, rough=(0.26, 0.5), scale=(50, 50, 5), bump=0.22)
+M_PLATE = metal('Voracity_Plate', (0.05, 0.03, 0.085), coat=0.25, rough=(0.27, 0.5), scale=(40, 40, 8), bump=0.3, bevel=0.003)
 M_DARK = metal('Voracity_BlackIron', (0.02, 0.015, 0.03), rough=(0.3, 0.6), scale=(70, 70, 3), bump=0.35)
 
 M_VINE = bpy.data.materials.new('Voracity_Vine'); _nt, _b = nodes_of(M_VINE)
@@ -121,26 +127,26 @@ _b.inputs['Subsurface Weight'].default_value = 0.12; _b.inputs['Subsurface Radiu
 _b.inputs['Coat Weight'].default_value = 0.3; _b.inputs['Coat Roughness'].default_value = 0.25
 tex_scratches(_nt, _b, scale=(30, 30, 30), bump_strength=0.55, rough=(0.3, 0.6), pits=True, bevel=0.0015, base_color=(0.05, 0.025, 0.08))
 
-M_EYE = glow('Voracity_Eyelet', (1.0, 0.32, 0.9), 6.0)
+M_EYE = glow('Voracity_Eyelet', (1.0, 0.2, 0.8), 1.5)
 M_RING_GLOW = glow('Voracity_RingGlow', (1.0, 0.3, 0.9), 3.5)
 M_GLASS = glow('Voracity_VioletGlass', (0.55, 0.16, 1.0), 1.2, rough=0.08)
 
 # the blade: dark forged outer plate; the inner (concave) edge burns, hottest at the edge. U: inner edge 0 -> outer edge 1.
 M_BLADE = bpy.data.materials.new('Voracity_Blade'); nt, b = nodes_of(M_BLADE)
-b.inputs['Base Color'].default_value = (0.025, 0.012, 0.05, 1); b.inputs['Metallic'].default_value = 0.92
-b.inputs['Coat Weight'].default_value = 0.35; b.inputs['Coat Roughness'].default_value = 0.05
+b.inputs['Base Color'].default_value = (0.022, 0.01, 0.045, 1); b.inputs['Metallic'].default_value = 0.8
+b.inputs['Coat Weight'].default_value = 0.2; b.inputs['Coat Roughness'].default_value = 0.05
 uvn = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(uvn.outputs['UV'], sep.inputs[0])
 ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'EASE'
-el = ramp.color_ramp.elements; el[0].position = 0.0; el[0].color = (1.0, 0.55, 0.96, 1); el[1].position = 0.5; el[1].color = (0, 0, 0, 1)
-x = el.new(0.07); x.color = (1.0, 0.3, 0.92, 1); x = el.new(0.2); x.color = (0.5, 0.1, 0.9, 1)
+el = ramp.color_ramp.elements; el[0].position = 0.0; el[0].color = (1.0, 0.72, 1.0, 1); el[1].position = 0.56; el[1].color = (0, 0, 0, 1)
+x = el.new(0.05); x.color = (1.0, 0.4, 0.95, 1); x = el.new(0.24); x.color = (0.72, 0.14, 0.95, 1); x = el.new(0.44); x.color = (0.16, 0.02, 0.36, 1)
 nt.links.new(sep.outputs['X'], ramp.inputs['Fac'])
 mar = nt.nodes.new('ShaderNodeTexNoise'); mar.inputs['Scale'].default_value = 9; mar.inputs['Detail'].default_value = 8
 mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 0.75
 nt.links.new(ramp.outputs['Color'], mix.inputs['A']); nt.links.new(mar.outputs['Color'], mix.inputs['B'])
 nt.links.new(mix.outputs['Result'], b.inputs['Emission Color'])
-pv = pulse_value(M_BLADE); mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 3.2
+pv = pulse_value(M_BLADE); mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 1.7
 nt.links.new(pv.outputs[0], mul.inputs[0]); nt.links.new(mul.outputs[0], b.inputs['Emission Strength'])
-tex_scratches(nt, b, scale=(30, 30, 30), bump_strength=0.25, rough=(0.14, 0.4), bevel=0.002, ao=False)
+tex_scratches(nt, b, scale=(30, 30, 30), bump_strength=0.25, rough=(0.26, 0.5), bevel=0.002, ao=False)
 
 
 # ============================================================== geometry helpers
@@ -176,10 +182,12 @@ def torus(name, major, minor, material, loc, rot=(0, 0, 0), scale=(1, 1, 1), par
     return link(o, parent)
 
 
-def tube(name, pts, radius, material, parent=None, taper=None, res=8, caps=True):
+def tube(name, pts, radius, material, parent=None, taper=None, res=8, caps=True, cyclic=False):
     cu = bpy.data.curves.new(name, 'CURVE'); cu.dimensions = '3D'
     cu.bevel_depth = radius; cu.bevel_resolution = res; cu.use_fill_caps = caps
     sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
+    if cyclic:
+        sp.use_cyclic_u = True
     for i, p in enumerate(pts):
         sp.points[i].co = (p[0], p[1], p[2], 1)
         sp.points[i].radius = taper(i / (len(pts) - 1)) if taper else 1.0
@@ -216,7 +224,7 @@ class Line:
 
 
 def glow_color(u):
-    stops = [(0.0, (1.0, 0.55, 0.96)), (0.07, (1.0, 0.3, 0.92)), (0.2, (0.5, 0.1, 0.9)), (0.5, (0.0, 0.0, 0.0))]
+    stops = [(0.0, (1.0, 0.72, 1.0)), (0.05, (1.0, 0.4, 0.95)), (0.24, (0.72, 0.14, 0.95)), (0.44, (0.16, 0.02, 0.36)), (0.56, (0.0, 0.0, 0.0))]
     if u >= stops[-1][0]:
         return (0.0, 0.0, 0.0, 1.0)
     for (a, ca), (b, cb) in zip(stops, stops[1:]):
@@ -230,7 +238,7 @@ def glow_color(u):
 UP = [(1.0, 0.0), (0.93, 0.7), (0.62, 1.4), (0.2, 1.9), (0.04, 1.3), (-0.12, 1.55), (-0.5, 1.7), (-0.9, 0.95), (-1.0, 0.0)]
 
 
-def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150, thick=0.017, taper_thick=0.55, sec=UP):
+def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150, thick=0.017, taper_thick=0.55, sec=UP, dy=0.0, smooth=True):
     bm = bmesh.new(); uvl = bm.loops.layers.uv.new('UVMap'); col = bm.loops.layers.float_color.new('Glow')
     ring = [(s, y) for s, y in sec] + [(s, -y) for s, y in reversed(sec[1:-1])]
     rows = []
@@ -241,7 +249,7 @@ def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150,
         row = []
         for s, y in ring:
             off = s * A if s >= 0 else s * B
-            row.append(bm.verts.new(P(cx + nx * off, cy + ny * off, y * th)))
+            row.append(bm.verts.new(P(cx + nx * off, cy + ny * off, y * th + dy)))
         rows.append(row)
     L = len(ring)
     for i in range(n):
@@ -259,10 +267,13 @@ def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150,
                         lp[col] = glow_color((1 - s) / 2)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    return mesh_obj(name, bm, material, parent, smooth=True)
+    return mesh_obj(name, bm, material, parent, smooth=smooth)
 
 
 # ============================================================== the scythe
+# Rebuilt from the reference drawing. Coordinates are (s, c): s = distance up the shaft from the foot spike, c = distance across it toward the
+# blade side, both in reference pixels (2 mm each). A bowed shaft with a double-twist throat, an almond talon at the foot, and at the head a wide
+# crescent blade whose inner face burns, a stack of spiked crest plates along its back, and a horned bone ring.
 TILT = bpy.data.objects.new('Voracity_Tilt', None); TILT.rotation_euler = (math.radians(-8), math.radians(26), 0); link(TILT)
 ROOT = bpy.data.objects.new('Voracity_Root', None); link(ROOT, TILT)
 parts = {}
@@ -274,110 +285,162 @@ def part(name):
     return e
 
 
-# --- shaft: dark ironwood core with iron ferrules, wrapped in a pair of thorned vines
+def Dv(ds, dc, dd=0.0):
+    return Vector((dc, dd, ds))
+
+
+def cr(pts, n=20):
+    """Catmull-Rom through 2D points"""
+    out = []
+    for i in range(len(pts) - 1):
+        p0, p1, p2, p3 = pts[max(0, i - 1)], pts[i], pts[i + 1], pts[min(len(pts) - 1, i + 2)]
+        for k in range(n):
+            t = k / n; t2 = t * t; t3 = t2 * t
+            out.append(tuple(0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3) for j in range(2)))
+    out.append(tuple(pts[-1]))
+    return out
+
+
+def bow(s):
+    return 46 * math.sin(math.pi * min(max(s, 0.0), 722.0) / 722.0)
+
+
+def radial_thorns(prefix, centre, radius, count, length, base, material, parent, tilt=0.35, phase=0.0):
+    for i in range(count):
+        a = phase + i / count * math.pi * 2
+        out = Vector((math.sin(a), math.cos(a), 0))
+        talon(f'{prefix}{i}', centre + out * radius, out + Vector((0, 0, tilt)), length, base, material, parent, curl=Vector((0, 0, tilt * 0.6)), n=7)
+
+
+# --- shaft: dark ironwood core, iron ferrules, a long-pitch pair of thorned vines
 SH = part('shaft')
-shaft_pts = [P(x, 14 * math.sin(x / 520.0)) for x in range(120, 1060, 16)]
-tube('Shaft', shaft_pts, 0.024, M_DARK, SH, taper=lambda t: 1.0 + 0.08 * math.sin(t * 11), res=16)
-for zf in (0.28, 0.62, 0.98, 1.34):
-    torus('Ferrule', 0.026, 0.0075, M_METAL, (14 * math.sin(zf / K / 520.0) * K, 0, zf), parent=SH, seg=48, ring=12)
-VINE_PTS = []
+tube('Shaft', [Q(s, bow(s)) for s in range(90, 748, 12)], 0.027, M_DARK, SH, taper=lambda t: 0.8 + 0.35 * t + 0.06 * math.sin(t * 14), res=16)
+for s in (262, 396, 470, 548):
+    torus('Ferrule', 0.027, 0.0078, M_METAL, (bow(s) * SC, 0, s * SC), parent=SH, seg=48, ring=12)
 for k, ph in enumerate((0.0, math.pi)):
     pts = []
-    for i in range(0, 481):
-        z = 0.2 + i * 0.0027
-        cx = 14 * math.sin(z / K / 520.0) * K
-        a = z / 0.19 * math.pi * 2 + ph
-        r = 0.034 + 0.004 * math.sin(z * 31 + ph)
-        pts.append(Vector((cx + r * math.sin(a), r * math.cos(a), z)))
-    VINE_PTS.append(pts)
-    tube(f'Vine{k}', pts, 0.0072, M_VINE, SH, taper=lambda t: 0.8 + 0.3 * math.sin(t * 60), res=6)
-    for i in range(10, 480, 22):
-        p = pts[i]; cx = 14 * math.sin(p.z / K / 520.0) * K
-        out = Vector((p.x - cx, p.y, 0)).normalized()
-        talon(f'Thorn{k}_{i}', p, out + Vector((0, 0, 0.5 if (i // 22) % 2 else -0.5)), 0.04, 0.0058, M_PLATE, SH, curl=Vector((0, 0, 0.35 if (i // 22) % 2 else -0.35)), n=6)
+    for i in range(0, 241):
+        s = 384 + (544 - 384) * i / 240
+        a = (s - 384) / 80 * math.pi * 2 + ph
+        r = 0.036 + 0.004 * math.sin(s * 0.31 + ph)
+        pts.append(Vector((bow(s) * SC + r * math.sin(a), r * math.cos(a), s * SC)))
+    tube(f'Vine{k}', pts, 0.0118, M_VINE, SH, taper=lambda t: 0.8 + 0.3 * math.sin(t * 50), res=6)
+    for i in range(10, 240, 30):
+        p = pts[i]; out = Vector((p.x - bow(p.z / SC) * SC, p.y, 0)).normalized(); sg = 1 if (i // 30) % 2 else -1
+        talon(f'Thorn{k}_{i}', p, out + Vector((0, 0, 0.55 * sg)), 0.075, 0.0085, M_PLATE, SH, curl=Vector((0, 0, 0.42 * sg)), n=6)
 
 
-def helix_binding(name, z0, z1):
+def helix_binding(name, s0, s1, R, turns, strand):
+    """two strands crossing round an open core, thorned collars at both ends, glowing beads down the middle"""
     e = part(name)
     for k, ph in enumerate((0.0, math.pi)):
         pts = []
-        for i in range(0, 161):
-            zz = z0 + (z1 - z0) * i / 160
-            a = (zz - z0) / 0.1 * math.pi * 2 + ph
-            pts.append(Vector((0.05 * math.sin(a) + 0.01, 0.05 * math.cos(a), zz)))
-        tube(f'{name}_strand{k}', pts, 0.0135, M_VINE, e, res=8)
-    for zz in (z0 - 0.014, z1 + 0.014):
-        o = torus(f'{name}_collar', 0.039, 0.0145, M_PLATE, (0.0, 0, zz), parent=e, seg=64, ring=16)
-    for i in range(1, 4):
-        uvsphere_at(f'{name}_bead', (0.0, 0, z0 + (z1 - z0) * i / 4), 0.0085, M_EYE, parent=e)
+        for i in range(0, 221):
+            u = i / 220; s = s0 + (s1 - s0) * u
+            a = u * turns * 2 * math.pi + ph; r = R * (0.86 + 0.14 * math.sin(u * math.pi))
+            pts.append(Vector((bow(s) * SC + r * math.sin(a), r * math.cos(a), s * SC)))
+        tube(f'{name}_strand{k}', pts, strand, M_VINE, e, taper=lambda t: 0.7 + 0.4 * math.sin(math.pi * t), res=8)
+        for i in range(14, 220, 36):
+            p = pts[i]; out = Vector((p.x - bow(p.z / SC) * SC, p.y, 0)).normalized(); sg = 1 if (i // 36) % 2 else -1
+            talon(f'{name}_thorn{k}_{i}', p, out + Vector((0, 0, 0.6 * sg)), R * 1.25, strand * 0.62, M_PLATE, e, curl=Vector((0, 0, 0.5 * sg)), n=6)
+    for s in (s0 - 6, s1 + 6):
+        c = Vector((bow(s) * SC, 0, s * SC))
+        torus(f'{name}_collar', R * 0.82, strand * 1.05, M_PLATE, tuple(c), parent=e, seg=64, ring=16)
+        radial_thorns(f'{name}_cthorn', c, R * 0.8, 6, R * 0.95, strand * 0.5, M_PLATE, e, tilt=0.5 if s == s1 + 6 else -0.5, phase=0.3)
+    for i in range(1, 5):
+        s = s0 + (s1 - s0) * i / 5
+        uvsphere_at(f'{name}_bead', (bow(s) * SC, 0, s * SC), 0.0085, M_EYE, parent=e)
     return e
 
 
-helix_binding('lowbind', 235 * K, 375 * K)
-helix_binding('upbind', 870 * K, 1010 * K)
+helix_binding('lowbind', 280, 372, 0.04, 1.5, 0.0115)
+helix_binding('upbind', 566, 716, 0.052, 1.75, 0.0145)
 
-# --- foot talon
+# --- foot talon: an almond of two twisting strands with a lit core, ending in a hooked spike
 FT = part('foot')
-torus('FootFrame', 0.064, 0.0135, M_PLATE, (0.0, 0, 0.105), rot=(math.pi / 2, 0, 0), scale=(1, 1.9, 1), parent=FT, seg=96, ring=20)
-talon('FootSpike', (0, 0, 0.048), (0, 0, -1), 0.19, 0.033, M_METAL, FT, n=20)
-talon('FootThornL', (0.01, 0, 0.14), (0.5, 0, -0.7), 0.075, 0.014, M_PLATE, FT, curl=(0.25, 0, 0), n=8)
-talon('FootThornR', (-0.01, 0, 0.14), (-0.5, 0, -0.7), 0.075, 0.014, M_PLATE, FT, curl=(-0.25, 0, 0), n=8)
-uvsphere_at('FootCore', (0, 0, 0.105), 0.03, M_EYE, parent=FT)
+for k in range(2):
+    pts = []
+    for i in range(0, 81):
+        u = i / 80; s = 262 + (62 - 262) * u
+        w = 48 * math.sin(math.pi * u) ** 0.8; ph = 1.2 * math.pi * u + k * math.pi
+        pts.append(Q(s, bow(s) + w * math.cos(ph), w * 0.55 * math.sin(ph)))
+    tube(f'AlmondStrand{k}', pts, 0.021, M_PLATE, FT, taper=lambda t: 0.4 + 0.6 * math.sin(math.pi * t) ** 0.6, res=8)
+glow_core = uvsphere_at('FootCore', Q(162, bow(162)), 1.0, M_EYE, parent=FT)
+glow_core.scale = (0.02, 0.014, 0.12)
+hook = quad_bez((84, 14), (38, 14), (-8, -22), 40)
+tube('FootSpike', [Q(s, c) for s, c in hook], 0.036, M_METAL, FT, taper=lambda t: max(0.03, (1 - t) ** 0.9), res=10)
+for sg in (1, -1):
+    talon(f'FootBlade{sg}', Q(112, bow(112) + sg * 8), Dv(-0.8, sg * 0.55), 0.19, 0.022, M_PLATE, FT, curl=Dv(-0.05, sg * 0.25), n=10)
 
-# --- ring (the maw)
-RING = (1130, -20); rc = P(*RING)
+# --- ring: a horned bone ring with burning eyelets, a pink throat ribbon, and a fan of claws
+RS, RC, RR = 790, -141, 62
+rc = Q(RS, RC)
 RG = part('ring')
-torus('Ring', 0.136, 0.031, M_PLATE, rc, rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=28)
-torus('RingGlow', 0.104, 0.0068, M_RING_GLOW, rc, rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=12)
-torus('RingRim', 0.155, 0.0045, M_GLASS, rc, rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=10)
-bm = bmesh.new()                                                       # little engraved plates all round the ring
-for i in range(24):
-    a = i / 24 * math.pi * 2
-    cx, cz = rc.x + math.cos(a) * 0.145, rc.z + math.sin(a) * 0.145
-    bmesh.ops.create_cube(bm, size=1.0, matrix=Matrix.Translation((cx, 0, cz)) @ Matrix.Rotation(a, 4, 'Y').inverted() @ Matrix.Diagonal((0.016, 0.034, 0.008, 1)))
-pl = mesh_obj('RingPlates', bm, M_METAL, RG, smooth=False); add_bevel(pl, 0.0016, 2)
+pts = []
+for i in range(0, 181):
+    a = i / 180 * math.pi * 2
+    r = RR * (1 + 0.07 * math.sin(3 * a + 0.6) + 0.04 * math.sin(7 * a)) * SC
+    pts.append(Vector((rc.x + r * math.sin(a), 0.0, rc.z + r * math.cos(a))))
+tube('Ring', pts, 0.036, M_PLATE, RG, taper=lambda t: 0.9 + 0.28 * math.sin(t * math.pi * 6), res=14, cyclic=True)
+torus('RingGlow', (RR - 20) * SC, 0.0065, M_RING_GLOW, tuple(rc), rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=12)
+torus('RingRim', (RR + 22) * SC, 0.0048, M_GLASS, tuple(rc), rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=10)
 for a in (200, 262, 330):
     ar = math.radians(a)
-    p = P(RING[0] + 92 * math.cos(ar), RING[1] + 92 * math.sin(ar))
-    uvsphere_at('Eyelet', p, 0.025, M_EYE, parent=RG)
-    torus('EyeletSocket', 0.025, 0.0075, M_PLATE, p, rot=(math.pi / 2, 0, 0), parent=RG, seg=48, ring=12)
+    p = Q(RS + RR * math.cos(ar), RC + RR * math.sin(ar))
+    uvsphere_at('Eyelet', p, 0.028, M_EYE, parent=RG)
+    torus('EyeletSocket', 0.028, 0.008, M_PLATE, tuple(p), rot=(math.pi / 2, 0, 0), parent=RG, seg=48, ring=12)
+# horns and spikes round the ring (angle 0 = up the shaft, 90 = toward the blade), length and base in reference pixels
+for ang, ln, base in ((298, 156, 12), (278, 118, 10.5), (252, 98, 10), (226, 84, 9.5), (205, 66, 9), (184, 56, 8.5), (322, 76, 9), (348, 62, 8), (14, 54, 7.5), (60, 48, 7), (110, 46, 7)):
+    ar = math.radians(ang); ds, dc = math.cos(ar), math.sin(ar)
+    p0 = Q(RS + (RR + 8) * ds, RC + (RR + 8) * dc)
+    talon(f'Horn{ang}', p0, Dv(ds, dc), ln * SC, base * SC * 1.45, M_PLATE, RG, curl=Dv(-dc, ds) * 0.16 * (1 if ang < 300 else -1), n=18)
+ribbon = quad_bez((782, -82), (738, -66), (726, -8), 40)
+tube('ThroatGlow', [Q(s, c) for s, c in ribbon], 0.0105, M_RING_GLOW, RG, taper=lambda t: 0.6 + 0.6 * math.sin(math.pi * t), res=8)
+for ds, dc, ln, base in ((0.72, -0.69, 96, 10), (0.3, -0.95, 84, 9), (-0.5, -0.86, 74, 9), (-0.85, -0.5, 66, 8), (0.9, 0.2, 70, 8)):
+    talon('Claw', Q(730, 0), Dv(ds, dc), ln * SC, base * SC, M_PLATE, RG, curl=Dv(-dc, ds) * 0.1, n=14)
 
-# --- blade: the concave side burns
-BL = Line(quad_bez((1130, 50), (1480, 300), (1040, 790)))
-wtot = lambda t: 205 * math.pow(1 - t, 0.9) * min(1.0, 0.55 + t * 5)
-wa = lambda t: wtot(t) * 0.58
-wb = lambda t: wtot(t) * 0.42
+# --- blade: a wide crescent, its inner face burning (U across the width: 0 at the inner edge)
+BL = Line(cr([(790, -88), (822, -40), (843, 15), (842, 80), (826, 148), (800, 208), (766, 253), (722, 288), (676, 314), (638, 328), (612, 334)], 18))
+wtot = lambda t: 100 * math.pow(1 - t, 0.82) * min(1.0, 0.62 + t * 4.2)
+wa = lambda t: wtot(t) * 0.52
+wb = lambda t: wtot(t) * 0.48
 BLD = part('blade')
-forged_blade('Blade', BL, wa, wb, M_BLADE, BLD, n=170, thick=0.019)
-for i, t in enumerate((0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)):          # eight spines along the back, hooked toward the root
+forged_blade('Blade', BL, wa, wb, M_BLADE, BLD, n=190, thick=0.011)
+
+
+def outer_edge(t):
     (cx, cy), (tx, ty) = BL.at(t); nx, ny = -ty, tx
-    bx, by = cx - nx * wb(t) * 0.96, cy - ny * wb(t) * 0.96
-    dx, dy = -nx * 0.75 - tx * 0.9, -ny * 0.75 - ty * 0.9; m = math.hypot(dx, dy)
-    d3 = Vector((dy / m, 0, dx / m))
-    talon(f'Spine{i}', P(bx, by), d3, (92 - i * 8) * K * 1.15, (46 - i * 3.5) * K / 2 * 1.05, M_PLATE, BLD, curl=Vector((0.0, 0, 0)) + Vector((-ty, 0, tx)) * -0.35, n=10)
-for i, t in enumerate((0.07, 0.17, 0.27, 0.37, 0.48, 0.6)):
+    return (cx - nx * wb(t), cy - ny * wb(t)), (-nx, -ny), (tx, ty)
+
+
+for i, t in enumerate((0.05, 0.12, 0.2, 0.29, 0.38, 0.47)):          # hooked spines along the back, curling toward the root
+    (bx, by), (ox, oy), (tx, ty) = outer_edge(t)
+    d = Vector((0, 0, 0)); dd = (ox * 0.7 - tx * 0.9, oy * 0.7 - ty * 0.9); m = math.hypot(*dd)
+    talon(f'Spine{i}', Q(bx, by), Dv(dd[0] / m, dd[1] / m), (58 - i * 5) * SC, (13 - i * 1.1) * SC, M_PLATE, BLD, curl=Dv(-ty, tx) * -0.3, n=10)
+for i, t in enumerate((0.07, 0.17, 0.27, 0.37, 0.48, 0.6)):          # burning eyelets cut into the dark upper half
     (cx, cy), (tx, ty) = BL.at(t); nx, ny = -ty, tx
-    o = -wtot(t) * 0.13
-    p = P(cx + nx * o, cy + ny * o, 0.0)
+    o = -wtot(t) * 0.26
+    p = Q(cx + nx * o, cy + ny * o)
     for side in (1, -1):
         e = uvsphere_at(f'BladeEye{i}_{side}', p, 1.0, M_EYE, parent=BLD)
-        e.scale = (wtot(t) * 0.2 * K, 0.006, (wtot(t) * 0.055 + 3) * K)
-        e.rotation_euler = (0, math.atan2(tx, ty) - math.pi / 2, 0)
-        e.location.y = 0.0185 * side * (1 - 0.55 * t)
+        e.scale = (wtot(t) * 0.34 * SC, 0.005, (wtot(t) * 0.1 + 2) * SC)
+        e.rotation_euler = (0, math.atan2(-tx, ty), 0)
+        e.location.y = 0.034 * side * (1 - 0.5 * t)
 
-# --- mantle: shingled plates over the blade root, and a ruff of thorns off the ring
+# --- mantle: the crest, three ranks of sharp curved plates stacked along the back of the blade, all sweeping back toward the root
 MT = part('mantle')
-for i in range(3):
-    k1, k2, extra = 0.05 + 0.28 * i, 1.08 + 0.12 * i, 16 * i
-    t0, t1 = 0.01 + 0.03 * i, 0.52 - 0.1 * i
-    sec = [(1.0, 0.0), (0.8, 1.2), (0.0, 1.6), (-0.8, 1.2), (-1.0, 0.0)]
-    forged_blade(f'MantlePlate{i}', BL, (lambda k1: (lambda t: -wb(t) * k1))(k1), (lambda k2, e: (lambda t: wb(t) * k2 + e))(k2, extra),
-                 M_PLATE, MT, t0=t0, t1=t1, n=48, thick=0.016 + 0.005 * i, taper_thick=0.0, sec=sec)
-for a, ln, base in ((180, 330, 44), (208, 240, 38), (236, 200, 36), (262, 230, 34), (290, 180, 30), (152, 150, 36), (118, 110, 30), (322, 120, 28)):
-    ar = math.radians(a)
-    p0 = P(RING[0] + 86 * math.cos(ar), RING[1] + 86 * math.sin(ar))
-    d = Vector((math.sin(ar), 0, math.cos(ar)))
-    talon(f'Crown{a}', p0, d, ln * K * 1.05, base * K / 2 * 1.05, M_PLATE, MT, curl=Vector((-d.z, 0, d.x)) * 0.12, n=16)
+FEATHER_SEC = [(1.0, 0.0), (0.55, 0.9), (0.0, 1.7), (-0.55, 0.9), (-1.0, 0.0)]
+for layer in range(3):
+    for i in range(8):
+        t = min(0.92, 0.03 + i * 0.072 + layer * 0.03); L = (200 - i * 15) * (1 - 0.14 * layer)
+        (bx, by), (ox, oy), (tx, ty) = outer_edge(t)
+        inset = wtot(t) * 0.5 + 5 * layer
+        b = (bx - ox * inset, by - oy * inset)
+        ctrl = (b[0] + ox * L * 0.6 + tx * L * 0.05, b[1] + oy * L * 0.6 + ty * L * 0.05)
+        tip = (b[0] + ox * L * 0.62 - tx * L * 0.8, b[1] + oy * L * 0.62 - ty * L * 0.8)
+        wf = (lambda k: (lambda u: 31 * k * math.pow(1 - u, 0.62) * min(1.0, 0.45 + u * 5)))(1 - 0.15 * layer)
+        forged_blade(f'Crest{layer}_{i}', Line(quad_bez(b, ctrl, tip, 34)), wf, wf, M_PLATE, MT, n=34, thick=0.0085, taper_thick=0.5,
+                     sec=FEATHER_SEC, dy=((layer - 1) * 0.011 + (0.006 if i % 2 else -0.006)), smooth=False)
 
 # ============================================================== stage
 floor_m = bpy.data.materials.new('Obsidian'); fnt, fb = nodes_of(floor_m)
@@ -403,7 +466,7 @@ wn, wl = world.node_tree.nodes, world.node_tree.links
 bg = wn['Background']; bg.inputs['Strength'].default_value = 1.0
 tc = wn.new('ShaderNodeTexCoord'); sp = wn.new('ShaderNodeSeparateXYZ'); rp = wn.new('ShaderNodeValToRGB')
 wl.new(tc.outputs['Generated'], sp.inputs[0]); wl.new(sp.outputs['Z'], rp.inputs['Fac'])
-re_ = rp.color_ramp.elements; re_[0].position = 0.4; re_[0].color = (0.002, 0.001, 0.006, 1); re_[1].position = 1.0; re_[1].color = (0.22, 0.08, 0.5, 1)
+re_ = rp.color_ramp.elements; re_[0].position = 0.4; re_[0].color = (0.002, 0.001, 0.006, 1); re_[1].position = 1.0; re_[1].color = (0.08, 0.03, 0.2, 1)
 md = re_.new(0.6); md.color = (0.03, 0.012, 0.09, 1)
 wl.new(rp.outputs['Color'], bg.inputs['Color'])
 vs = wn.new('ShaderNodeVolumeScatter'); vs.inputs['Density'].default_value = 0.0011; vs.inputs['Anisotropy'].default_value = 0.4
@@ -419,14 +482,14 @@ def light(name, kind, loc, energy, color, size=2.0, parent=None):
     return o
 
 
-TARGET = bpy.data.objects.new('FocusTarget', None); TARGET.location = (0.15, 0, 0.82); link(TARGET)
+TARGET = bpy.data.objects.new('FocusTarget', None); TARGET.location = (0.05, 0, 0.95); link(TARGET)
 RIG = bpy.data.objects.new('LightRig', None); link(RIG)
-key = light('Key', 'AREA', (-3.0, -3.2, 3.6), 800, (0.95, 0.85, 1.0), 2.6, RIG)
+key = light('Key', 'AREA', (-3.0, -3.2, 3.6), 260, (0.95, 0.85, 1.0), 2.6, RIG)
 rim1 = light('RimMagenta', 'AREA', (3.4, 2.4, 2.4), 1500, (1.0, 0.25, 0.85), 1.6, RIG)
-rim2 = light('RimBlue', 'AREA', (-3.2, 2.8, 2.0), 800, (0.35, 0.3, 1.0), 1.6, RIG)
-strip1 = light('StripL', 'AREA', (-1.6, -1.2, 1.2), 160, (1.0, 0.35, 0.9), 0.3, RIG); strip1.data.shape = 'RECTANGLE'; strip1.data.size = 0.18; strip1.data.size_y = 3.0
-strip2 = light('StripR', 'AREA', (1.7, -1.0, 1.0), 160, (0.5, 0.4, 1.0), 0.3, RIG); strip2.data.shape = 'RECTANGLE'; strip2.data.size = 0.18; strip2.data.size_y = 3.0
-top = light('Beam', 'SPOT', (0.4, -0.2, 6.2), 2600, (0.9, 0.7, 1.0)); top.data.spot_size = math.radians(26); top.data.spot_blend = 0.8
+rim2 = light('RimBlue', 'AREA', (-3.2, 2.8, 2.0), 520, (0.35, 0.3, 1.0), 1.6, RIG)
+strip1 = light('StripL', 'AREA', (-1.6, -1.2, 1.2), 70, (1.0, 0.35, 0.9), 0.3, RIG); strip1.data.shape = 'RECTANGLE'; strip1.data.size = 0.18; strip1.data.size_y = 3.0
+strip2 = light('StripR', 'AREA', (1.7, -1.0, 1.0), 70, (0.5, 0.4, 1.0), 0.3, RIG); strip2.data.shape = 'RECTANGLE'; strip2.data.size = 0.18; strip2.data.size_y = 3.0
+top = light('Beam', 'SPOT', (0.4, -0.2, 6.2), 1300, (0.9, 0.7, 1.0)); top.data.spot_size = math.radians(26); top.data.spot_blend = 0.8
 for l in (key, rim1, rim2, top, strip1, strip2):
     tt = l.constraints.new('TRACK_TO'); tt.target = TARGET; tt.track_axis = 'TRACK_NEGATIVE_Z'; tt.up_axis = 'UP_Y'
 
@@ -465,20 +528,20 @@ for f in range(-30, END + 31, 15):
 for f in range(-30, END + 31, 15):
     key_loc(ROOT, f, (0, 0, 0.05 * math.sin(2 * math.pi * f / 120)))
 
-EX = {'foot': (-250, 20), 'lowbind': (-90, -170), 'shaft': (0, 0), 'upbind': (80, 170), 'ring': (150, -210), 'mantle': (60, -130), 'blade': (260, 40)}
+EX = {'foot': (-250, 20), 'lowbind': (-90, -170), 'shaft': (0, 0), 'upbind': (80, 170), 'ring': (120, -250), 'mantle': (380, -70), 'blade': (190, 150)}
 for name, (dx, dy) in EX.items():
-    ex = Vector((dy * K * 1.25, 0, dx * K * 1.25))
+    ex = Vector((dy * KE * 1.25, 0, dx * KE * 1.25))
     for f, s in ((1, 0), (80, 0), (165, 1), (250, 1), (335, 0), (END + 1, 0)):
         key_loc(parts[name], f, ex * s)
-for f, z in ((1, 0.82), (120, 1.2), (250, 1.2), (335, 0.82), (END + 1, 0.82)):
-    key_loc(TARGET, f, (0.15, 0, z))
+for f, z in ((1, 0.95), (120, 1.3), (250, 1.3), (335, 0.95), (END + 1, 0.95)):
+    key_loc(TARGET, f, (0.05, 0, z))
 for f, (d, h) in ((1, (3.9, 0.9)), (120, (6.6, 1.2)), (250, (6.6, 1.2)), (335, (3.9, 0.9)), (END + 1, (3.9, 0.9))):
     key_loc(CAM, f, (-d * 0.28, -d, h + 0.5))
 for v in PULSES:
     for f in range(0, END + 31, 15):
         v.outputs[0].default_value = 1.0 + 0.45 * math.sin(2 * math.pi * f / 60) + 0.15 * math.sin(2 * math.pi * f / 23)
         v.outputs[0].keyframe_insert('default_value', frame=f)
-for l, base in ((rim1, 1500), (rim2, 800)):
+for l, base in ((rim1, 1500), (rim2, 520)):
     for f in range(0, END + 31, 15):
         l.data.energy = base * (1 + 0.3 * math.sin(2 * math.pi * f / 60 + (0 if l is rim1 else 2)))
         l.data.keyframe_insert('energy', frame=f)
@@ -538,7 +601,21 @@ try:                                       # the web model: only the scythe (no 
 except Exception as ex:
     print('glb skipped', ex)
 
-if ARGS[:1] == ['still']:
+if ARGS[:1] == ['ref']:                    # face-on, no animation, leaning like the reference drawing: ref [samples] [width height]
+    for o in (ROOT, RIG, TARGET, CAM):
+        o.animation_data_clear()
+    scene.frame_set(1)
+    TILT.rotation_euler = (0, 0, 0); ROOT.rotation_euler = (0, math.radians(-21), 0); ROOT.location = (0, 0, 0); RIG.rotation_euler = (0, 0, 0)
+    for p_ in parts.values():
+        p_.animation_data_clear(); p_.location = (0, 0, 0)
+    TARGET.location = (-0.35, 0, 0.9); CAM.location = (-0.35, -3.1, 0.95); cam_d.lens = 50
+    cy.samples = int(ARGS[1]) if len(ARGS) > 1 else 48
+    scene.render.resolution_x, scene.render.resolution_y = (int(ARGS[2]), int(ARGS[3])) if len(ARGS) > 3 else (900, 1100)
+    scene.render.image_settings.file_format = 'PNG'
+    scene.render.filepath = os.path.join(HERE, 'ref_view.png')
+    bpy.ops.render.render(write_still=True)
+    print('RENDERED ref')
+elif ARGS[:1] == ['still']:
     scene.frame_set(int(ARGS[1]) if len(ARGS) > 1 else 1)
     cy.samples = int(ARGS[2]) if len(ARGS) > 2 else 48
     if len(ARGS) > 4:
