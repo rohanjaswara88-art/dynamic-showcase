@@ -8,7 +8,7 @@ const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
 const FS = `
 precision highp float;
 uniform vec2 uRes; uniform float uT, uMix, uFlash, uBolt;
-uniform float uA, uB; uniform vec3 uTint;
+uniform float uA, uB; uniform vec3 uTint; const float uSnow=.32;
 uniform vec2 uMouse;
 
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
@@ -38,13 +38,14 @@ vec3 env0(vec2 uv,float t,float asp){
 
 /* 1: snow blizzard */
 vec3 snowLayer(vec2 uv,float asp,float t,float sc,float spd,float sz,float seed){
+  float dens=uSnow;
   vec2 p=vec2(uv.x*asp,uv.y)*sc+vec2(.55,1.)*spd*t*.55+seed*13.;
   vec2 id=floor(p),f=fract(p);
   float h=hash(id+seed);
   vec2 o=.22+.56*hash2(id+seed*7.);
   float rr=sz*(.45+.55*hash(id+11.));
   vec2 d=f-o; d.x+=d.y*.3;
-  return vec3(smoothstep(rr,rr*.12,length(d))*step(.4,h));
+  return vec3(smoothstep(rr,rr*.12,length(d))*step(.4+dens,h));
 }
 /* ice spires: one sawtooth of jagged crystal columns per layer */
 vec4 spireLayer(vec2 p,float f,float seed,float base,float amp,float wid){
@@ -108,7 +109,7 @@ vec3 env1(vec2 uv,float t,float asp){
     col=mix(sea,refl*vec3(.78,.9,1.),fres);
     col+=vec3(.6,.9,1.)*smoothstep(.62,.9,noise(vec2(p.x*14.-t*.2,dy*70.)))*.18*(1.-dy*2.);
   }
-  vec3 sn=snowLayer(uv,asp,t,44.,1.,.15,1.)*.5+snowLayer(uv,asp,t,22.,1.5,.15,2.)*.7+snowLayer(uv,asp,t,10.,2.2,.14,3.)*.85;
+  vec3 sn=snowLayer(uv,asp,t,30.,1.,.14,1.)*.35+snowLayer(uv,asp,t,12.,2.,.13,3.)*.6;
   col+=sn*vec3(.9,.96,1.);
   return col;
 }
@@ -188,9 +189,9 @@ vec3 env3(vec2 uv,float t,float asp){
 /* 4: the landing: warm dark, slow golden fog that leans toward the colour of the relic being read */
 vec3 env4(vec2 uv,float t,float asp){
   vec2 p=vec2(uv.x*asp,uv.y);
-  vec3 col=mix(vec3(.02,.016,.012),vec3(.07,.05,.035),smoothstep(1.,.0,uv.y));
+  vec3 col=mix(vec3(.008,.02,.022),vec3(.02,.06,.062),smoothstep(1.,.0,uv.y));
   float f1=fbm(vec2(p.x*1.3+t*.02,p.y*1.6-t*.015)), f2=fbm(vec2(p.x*2.6-t*.03,p.y*2.2+t*.02+4.));
-  vec3 fogc=mix(vec3(.55,.42,.2),uTint,.65);
+  vec3 fogc=mix(vec3(.1,.5,.45),uTint,.6);
   col+=fogc*(smoothstep(.35,.85,f1)*.16+smoothstep(.5,.9,f2)*.1);
   col+=fogc*exp(-length((uv-vec2(.5,.62))*vec2(asp*.6,1.))*2.2)*.14;
   col+=fogc*.05*smoothstep(.0,1.,noise(p*220.+t*.05))*smoothstep(.7,.0,uv.y);
@@ -248,7 +249,7 @@ export function startGL(canvas) {
   let quality = reducedStart(small), cw = 0, ch = 0;
   const q = { a: 0, b: 0, mix: 0, to: 0, fl: 0, flT: 3, bolt: 0.5 };
   const envOf = (i) => (i < 0 ? 4 : WEAPONS[i].env);
-  const tint = [0.55, 0.42, 0.2];
+  const tint = [0.1, 0.5, 0.45];
   q.a = q.b = envOf(world.cur);
 
   function reducedStart(sm) { return world.reduce ? 0.35 : sm ? 0.42 : 0.55; }

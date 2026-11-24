@@ -8,7 +8,7 @@ export const FOLIO = {
 
 export const BEATS = [
   {
-    id: 'prologue', num: 'Prologue', name: 'The Reckoning of Edges', place: 'The Ash Roads, in the keepers’ own hand', tint: [0.55, 0.42, 0.2],
+    id: 'prologue', num: 'Prologue', name: 'The Reckoning of Edges', place: 'The Ash Roads, in the keepers’ own hand', tint: [0.1, 0.5, 0.45],
     text: 'The old keepers of the Ash Roads kept a ledger of every blade that ever drew blood without a hand to guide it. Their count stopped at four. They did not write why. They wrote only where each was found and who last carried it, so that the next fool would know exactly what he was choosing.'
   },
   {
@@ -28,7 +28,7 @@ export const BEATS = [
     text: 'Lightning had struck the same tree for a thousand years, and among its roots a vein of black glass cracked open around a humming blade. Corvane the Tallyman, lord of ledgers, bought it with the debt of a kingdom. The storm found him the same night. The tally book beside him was still open, in a hand that had begun to run past the margins.'
   },
   {
-    id: 'epilogue', num: 'Epilogue', name: 'Four Sins, One Table', place: 'Where the keepers stopped writing', tint: [0.55, 0.42, 0.2],
+    id: 'epilogue', num: 'Epilogue', name: 'Four Sins, One Table', place: 'Where the keepers stopped writing', tint: [0.1, 0.5, 0.45],
     text: 'Gluttony, pride, envy, greed. Four edges, four owners, four endings. Come closer and see how each is made. Take them apart piece by piece, learn what each one wants, and keep your hand open.',
     cta: 'Descend into the gallery'
   }

@@ -3,7 +3,7 @@ import { Content } from './Landing';
 import { world } from '../lib/world';
 import { onFrame } from '../lib/loop';
 
-const Z = 2.1;          // magnification
+const Z = 2.3;          // magnification
 
 /** A magnifying glass that follows the pointer over the story. Inside it is a second, scaled-up copy of the story
  *  (always fully lit), shifted so that the point under the pointer sits at the centre of the glass. */

@@ -23,14 +23,14 @@ const AURA = [
   /* VORACITY: hellfire. Magenta flame tongues licking up off the blade, mantle and ring, sparks, a few soul wisps */
   { glow: ['rgba(255,90,235,0.6)', 16, 200, 0.24], parts: ['blade', 'blade', 'mantle', 'ring', 'upbind', 'foot'], emit: [['flame', 72], ['spark', 28], ['wisp', 12]], ambient: [['ember', 24, '255,120,230']] },
   /* HALCYON: frost. Cold mist and ice streaks pouring down off the blade and wings, glints */
-  { glow: ['rgba(150,225,255,0.55)', 18, 230, 0.2], parts: ['blade', 'blade', 'wings', 'shardsU', 'shardsL', 'core', 'pommel'], emit: [['rain', 46], ['mist', 30], ['glint', 14]], ambient: [['flake', 14]] },
+  { glow: ['rgba(150,225,255,0.55)', 18, 230, 0.2], parts: ['blade', 'blade', 'wings', 'shardsU', 'shardsL', 'core', 'pommel'], emit: [['rain', 22], ['mist', 26], ['glint', 14]], ambient: [['flake', 3]] },
   /* ECLIPSE: dark smoke with a red rim pouring off the steel, motes pulled into the gem */
   { glow: ['rgba(255,30,30,0.55)', 16, 210, 0.26], parts: ['blade', 'blade', 'guard', 'fangsU', 'fangsL', 'pommel'], emit: [['smoke', 18], ['mote', 26]], ambient: [['ember', 10, '255,40,40']] },
   /* AVARICE: storm. Lightning along the veins, violet static, falling gold */
   { glow: ['rgba(170,110,255,0.55)', 16, 200, 0.24], parts: ['blade', 'blade', 'blade', 'guard', 'finsU', 'finsL'], emit: [['static', 36], ['gold', 18]], arcs: 1, ambient: [['dust', 22]] }
 ];
 
-const LANDING = { parts: [], emit: [], ambient: [['dust', 26], ['ember', 9, '255,196,110']] };
+const LANDING = { parts: [], emit: [], ambient: [['dust', 26, '150,235,210'], ['ember', 9, '140,235,205']] };
 
 export function startFX(canvas) {
   if (!canvas) return () => {};
@@ -63,7 +63,7 @@ export function startFX(canvas) {
       case 'mote': { const gp = ctl; p.sp = sprite('rgba(255,50,50,0.85)', 0.9); p.size = rnd(5, 11) * vf; p.a = 0.9; p.max = 4; p.tx = gp[0]; p.ty = gp[1]; p.sway = 0; p.grow = 0.7; p.v = rnd(0.5, 1); const ang = Math.random() * 6.28, r = rnd(0.28, 0.5) * Math.min(W, H); p.x = gp[0] + Math.cos(ang) * r; p.y = gp[1] + Math.sin(ang) * r; p.vx = 0; p.vy = 0; break; }
       case 'static': p.sp = sprite('rgba(190,130,255,0.85)', 0.9); p.max = rnd(0.7, 1.6); p.size = rnd(7, 15) * vf; p.a = 0.95; p.vx = rnd(-50, 50); p.vy = rnd(-50, 30); p.jit = 140; p.sway = 0; p.grow = 0.8; break;
       case 'gold': p.sp = sprite('rgba(255,205,90,0.9)', 1); p.max = rnd(1.6, 3); p.size = rnd(11, 20) * vf; p.a = 1; p.star = true; p.vx = nx * 12 + rnd(-10, 10); p.vy = rnd(8, 40); p.g = 150; p.sway = 0; p.gold = true; break;
-      case 'dust': p.sp = sprite('rgba(255,200,90,0.8)', 0.9); p.max = rnd(5, 9); p.size = rnd(3, 7) * vf; p.a = rnd(0.3, 0.8); p.vx = rnd(-25, 10); p.vy = rnd(30, 90); p.sway = rnd(4, 14); p.grow = 1; p.x = rnd(0, W); p.y = -10; break;
+      case 'dust': p.sp = sprite(`rgba(${ctl || '255,200,90'},0.8)`, 0.9); p.max = rnd(5, 9); p.size = rnd(3, 7) * vf; p.a = rnd(0.3, 0.8); p.vx = rnd(-25, 10); p.vy = rnd(30, 90); p.sway = rnd(4, 14); p.grow = 1; p.x = rnd(0, W); p.y = -10; break;
       default: p.on = false;
     }
   }
@@ -114,7 +114,7 @@ export function startFX(canvas) {
       while (acc[kind] >= 1 && guard++ < 3) {
         acc[kind] -= 1;
         if (kind === 'ember') make('ember', rnd(0, W), H + 10, 0, 0, vf, col);
-        else make(kind, rnd(0, W), -10, 0, 0, vf, null);
+        else make(kind, rnd(0, W), -10, 0, 0, vf, col || null);
       }
     });
 

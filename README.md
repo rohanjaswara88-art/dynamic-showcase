@@ -68,3 +68,18 @@ No SVG filters, no CSS blur on large layers, DPR capped at 1.5 for the canvases,
 off screen are not drawn, loops pause in hidden tabs, and `prefers-reduced-motion` gets fewer particles, no pinning and a
 static exploded diagram. The weapon is vector and is re-rasterised on every pose change, so frame cost grows with the
 area it covers; see the notes in the final report for measured numbers.
+
+## 3D models (Blender)
+
+`models/voracity/` holds the first 3D relic, the scythe, built entirely from a script so it can be re-run and tuned:
+
+| File | What it is |
+| --- | --- |
+| `build_voracity.py` | Builds the model, materials, lights, camera and animation in Blender (5.2). Same 7 parts as the site. |
+| `voracity.blend` | The built scene (open it in Blender). |
+| `voracity.glb` | The model with its spin and pull-apart animation, for the web. |
+| `voracity_turntable.mp4` | A 12 second looping render: the scythe floats and spins, pulls apart into its parts and comes back together. |
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim
+```

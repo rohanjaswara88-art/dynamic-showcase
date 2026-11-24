@@ -11,7 +11,7 @@ export default function Cursor() {
   const nat = useRef(null), word = useRef(null), line = useRef(null);
 
   useEffect(() => {
-    let contactT = -99, cx = 0, cy = 0, wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0;
+    let anchored = false, placed = false, contactT = -99, cx = 0, cy = 0, wasHidden = true, hitT = 0, scanT = -1, nextScan = 3, shownFor = -1, natW = 0;
     const off = onFrame((now, dt) => {
       const ctl = world.chapters[world.cur];
       const pointer = world.fine && world.mx > -9000;
@@ -44,30 +44,31 @@ export default function Cursor() {
         if (pointer && ctl && ctl.visible) {
           if (ctl.hit(world.mx, world.my)) hitAt = [world.mx, world.my];
         } else if (scanning && ctl && ctl.visible && ctl.hit(sx, sy)) hitAt = [sx, sy];
-        if (hitAt) { contactT = now; cx = hitAt[0]; cy = hitAt[1]; }
+        if (hitAt) { contactT = now; if (!anchored) { anchored = true; placed = false; cx = hitAt[0]; cy = hitAt[1]; } }
         world.over = hitAt ? 'x' : null;
       }
       const hot = now - contactT < CONTACT_HOLD;
       const nT = hot ? 1 : 0;
       world.nature += (nT - world.nature) * (1 - Math.exp(-dt * (nT ? 8 : 1.6)));
       world.heat = 0;
+      if (!hot && world.nature < 0.01) anchored = false;
 
       /* the nature word */
       if (nat.current && ctl) {
         if (shownFor !== world.cur) {
           const d = ctl.data; shownFor = world.cur;
-          nat.current.style.setProperty('--wf', d.font); nat.current.style.setProperty('--fs', d.fontScale);
+          nat.current.style.setProperty('--wf', d.font); nat.current.style.setProperty('--fs', d.fontScale); nat.current.style.setProperty('--ng', d.glow);
           word.current.textContent = d.sin; line.current.textContent = d.sinLine;
           natW = nat.current.offsetWidth;
         }
-        const a = world.nature, vw = innerWidth, vh = innerHeight;
+        const a = world.nature;
         nat.current.style.opacity = a.toFixed(3);
-        if (a <= 0.003) wasHidden = true;
-        if (a > 0.003) {
-          if (wasHidden) { natW = nat.current.offsetWidth; wasHidden = false; }
-          const ax = cx, ay = cy, w = natW || 240;
-          const x = !pointer ? (vw - w) / 2 : Math.min(vw - w - 12, Math.max(12, ax + 30)), y = !pointer ? vh * 0.2 : Math.min(vh - 120, Math.max(70, ay - 70));
-          nat.current.style.transform = `translate3d(${x.toFixed(1)}px,${(y + (1 - a) * 10).toFixed(1)}px,0) scale(${(0.94 + 0.06 * a).toFixed(3)})`;
+        if (a > 0.003 && !placed) {                      // the word is placed once per touch and then stays perfectly still
+          placed = true;
+          natW = nat.current.offsetWidth || 240;
+          const vw = innerWidth, vh = innerHeight, w = natW;
+          const x = !pointer ? (vw - w) / 2 : Math.min(vw - w - 16, Math.max(16, cx + 28)), y = !pointer ? vh * 0.2 : Math.min(vh - 130, Math.max(76, cy - 80));
+          nat.current.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
         }
       }
     });
