@@ -45,6 +45,7 @@ npm run build      # writes ../index.html and ../assets
 - `lib/geom.js`: the path kit (polygons, Catmull-Rom curves, ribbons along a centre-line, thorns, seeded random).
 - `weapons/kit.jsx`: `Part`, the wrapper every weapon part uses. It adds a soft cast shadow (stacked widening strokes of the
   part's own silhouette, no SVG filters), a cursor light overlay and an infrared heat overlay.
+- `lib/model3d.js`, `components/Chapter3D.jsx`: the live 3D scythe (three.js loads `app/src/assets/voracity.glb`, exported from Blender by `models/voracity/build_voracity.py`). Voracity uses it; if WebGL or the model fails, the 2D drawing is used instead.
 - `weapons/voracity.jsx`, `halcyon.jsx`, `eclipse.jsx`, `avarice.jsx`: the four weapons, in "sword space" (long axis on +x).
 - `weapons/data.js`: names, fonts, sins, lore, per-part text and explode offsets.
 - `lib/pose.js`: fitting a weapon into screen regions (hero, exploded overview, a camera for each part, lore) for any screen.

@@ -215,12 +215,23 @@ class Line:
         return (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f), (ta[0] + (tb[0] - ta[0]) * f, ta[1] + (tb[1] - ta[1]) * f)
 
 
+def glow_color(u):
+    stops = [(0.0, (1.0, 0.55, 0.96)), (0.07, (1.0, 0.3, 0.92)), (0.2, (0.5, 0.1, 0.9)), (0.5, (0.0, 0.0, 0.0))]
+    if u >= stops[-1][0]:
+        return (0.0, 0.0, 0.0, 1.0)
+    for (a, ca), (b, cb) in zip(stops, stops[1:]):
+        if u <= b:
+            f = (u - a) / (b - a)
+            return (ca[0] + (cb[0] - ca[0]) * f, ca[1] + (cb[1] - ca[1]) * f, ca[2] + (cb[2] - ca[2]) * f, 1.0)
+    return (0.0, 0.0, 0.0, 1.0)
+
+
 # a forged blade section: (s, y). s = +1 inner edge ... -1 outer edge. Bevelled edges and a shallow fuller down the middle.
 UP = [(1.0, 0.0), (0.93, 0.7), (0.62, 1.4), (0.2, 1.9), (0.04, 1.3), (-0.12, 1.55), (-0.5, 1.7), (-0.9, 0.95), (-1.0, 0.0)]
 
 
 def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150, thick=0.017, taper_thick=0.55, sec=UP):
-    bm = bmesh.new(); uvl = bm.loops.layers.uv.new('UVMap')
+    bm = bmesh.new(); uvl = bm.loops.layers.uv.new('UVMap'); col = bm.loops.layers.float_color.new('Glow')
     ring = [(s, y) for s, y in sec] + [(s, -y) for s, y in reversed(sec[1:-1])]
     rows = []
     for i in range(n + 1):
@@ -245,6 +256,7 @@ def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150,
                     if lp.vert in rows[ri]:
                         s = ring[rows[ri].index(lp.vert)][0]
                         lp[uvl].uv = ((1 - s) / 2, (t0 + (t1 - t0) * ri / n))
+                        lp[col] = glow_color((1 - s) / 2)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return mesh_obj(name, bm, material, parent, smooth=True)
@@ -506,8 +518,22 @@ except Exception as ex:
 
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'voracity.blend'))
 print('SAVED blend')
-try:
-    bpy.ops.export_scene.gltf(filepath=os.path.join(HERE, 'voracity.glb'), export_format='GLB', export_animations=True, export_apply=True, export_yup=True)
+try:                                       # the web model: only the scythe (no floor, lights or embers), glow colours kept
+    bpy.ops.object.select_all(action='DESELECT')
+    def sel(o):
+        o.select_set(True)
+        for c in o.children:
+            sel(c)
+    sel(TILT)
+    bpy.context.view_layer.objects.active = ROOT
+    web = os.path.join(HERE, '..', '..', 'app', 'src', 'assets', 'voracity.glb')
+    os.makedirs(os.path.dirname(web), exist_ok=True)
+    for path in (os.path.join(HERE, 'voracity.glb'), web):
+        try:
+            bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_animations=False, use_selection=True,
+                                      export_apply=True, export_yup=True, export_vertex_color='ACTIVE')
+        except TypeError:
+            bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_animations=False, use_selection=True, export_apply=True, export_yup=True)
     print('SAVED glb')
 except Exception as ex:
     print('glb skipped', ex)
