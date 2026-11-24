@@ -45,7 +45,8 @@ npm run build      # writes ../index.html and ../assets
 - `lib/geom.js`: the path kit (polygons, Catmull-Rom curves, ribbons along a centre-line, thorns, seeded random).
 - `weapons/kit.jsx`: `Part`, the wrapper every weapon part uses. It adds a soft cast shadow (stacked widening strokes of the
   part's own silhouette, no SVG filters), a cursor light overlay and an infrared heat overlay.
-- `lib/model3d.js`, `components/Chapter3D.jsx`: the live 3D scythe (three.js loads `app/src/assets/voracity.glb`, exported from Blender by `models/voracity/build_voracity.py`). Voracity uses it; if WebGL or the model fails, the 2D drawing is used instead.
+- `components/ChapterVideo.jsx`: the Voracity chapter. Two clips (the scythe floating in its flames, then coming apart into its pieces) are joined into one all-intra video (`assets/voracity-scroll.mp4`) and the scroll sets its time, so scrolling forward plays it and scrolling back plays it in reverse. Captions, the parts list and the lore card are laid over it. If the video cannot load, the live 3D scythe below is used.
+- `lib/model3d.js`, `components/Chapter3D.jsx`: the live 3D scythe (three.js loads `app/src/assets/voracity.glb`, exported from Blender by `models/voracity/build_voracity.py`). Used as the fallback for the film; if WebGL or the model fails too, the 2D drawing is used.
 - `weapons/voracity.jsx`, `halcyon.jsx`, `eclipse.jsx`, `avarice.jsx`: the four weapons, in "sword space" (long axis on +x).
 - `weapons/data.js`: names, fonts, sins, lore, per-part text and explode offsets.
 - `lib/pose.js`: fitting a weapon into screen regions (hero, exploded overview, a camera for each part, lore) for any screen.
@@ -83,4 +84,12 @@ area it covers; see the notes in the final report for measured numbers.
 
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim
+```
+
+### The scroll film
+
+`app/src/assets/voracity-scroll.mp4` is the two source clips joined with a 0.6 s cross-dissolve, the black side borders of the second clip trimmed, and encoded with every frame a keyframe (`-g 1`) so a seek to any frame is instant in both directions:
+
+```powershell
+ffmpeg -i a.mp4 -i b.mp4 -filter_complex "[0:v]crop=1252:704:8:2,scale=1280:720,setsar=1,fps=24[a];[1:v]delogo=x=1204:y=14:w=52:h=48,crop=1252:704:8:2,scale=1280:720,setsar=1,fps=24[b];[a][b]xfade=transition=fade:duration=0.6:offset=7.3,format=yuv420p[v]" -map "[v]" -an -c:v libx264 -preset slow -crf 28 -g 1 -movflags +faststart voracity-scroll.mp4
 ```
