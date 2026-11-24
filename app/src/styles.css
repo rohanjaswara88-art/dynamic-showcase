@@ -153,14 +153,12 @@ main{position:relative;z-index:1}
 
 /* ---- the magnifying glass ---- */
 .lens-frame{--ls:240px;position:fixed;left:0;top:0;z-index:85;width:var(--ls);height:var(--ls);pointer-events:none;opacity:0;will-change:transform,opacity}
-.lens{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#04100e;border:2px solid var(--gold);box-shadow:0 0 0 7px rgba(3,12,10,.55),0 0 0 8px rgba(127,224,192,.45),0 26px 70px rgba(0,0,0,.65),inset 0 0 50px rgba(0,0,0,.6)}
-.lens::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse 52% 34% at 32% 20%,rgba(255,255,255,.2),transparent 70%),radial-gradient(circle,transparent 58%,rgba(0,0,0,.55) 100%);pointer-events:none}
+.lens{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#041512;-webkit-mask-image:radial-gradient(circle,#000 66%,transparent 71%);mask-image:radial-gradient(circle,#000 66%,transparent 71%)}
 .lens-world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 .lens-world .lc-p .w{opacity:1}
 .lens-world .lc-title,.lens-world .lc-name{filter:none}
 .lens-world .lc-hero .ch,.lens-world .lc-kicker,.lens-world .lc-sub,.lens-world .lc-cue,.lens-world .lc-head>*{opacity:1!important;transform:none!important}
 .lens-world .lc-rule{transform:none!important}
-.lens-handle{position:absolute;left:50%;top:50%;width:20px;height:150px;margin-left:-10px;border-radius:10px;background:linear-gradient(90deg,#1f5a4a,#9be8cf 45%,#2a6e5b);transform-origin:50% 0;transform:rotate(-45deg) translateY(calc(var(--ls)/2 + 2px));box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:-1}
 @media(max-width:820px){
   .lc-beat,.lc-beat.flip{grid-template-columns:1fr;min-height:0;padding:12vh 0;gap:22px}
   .lc-beat.flip .lc-head{order:0;text-align:left}.lc-beat.flip .lc-head .lc-rule{margin-left:0}.lc-beat.flip .lc-place{margin-left:0}
@@ -181,3 +179,13 @@ main{position:relative;z-index:1}
 @media(max-width:1000px){.cx-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(hover:none),(max-width:600px){.cx{font-size:12px}.cx-grid{grid-template-columns:1fr}}
 .lc-codex .lc-place{max-width:72ch}
+
+/* the combined story page */
+.lc-story{max-width:1240px;margin:0 auto;padding:12vh 0 10vh}
+.lc-story .lc-place{max-width:78ch;margin-bottom:0}
+.cx-n{font-family:var(--uncial);color:var(--gold);font-size:14px;margin-bottom:4px}
+.cx-place{color:var(--gold2);letter-spacing:.14em;text-transform:uppercase;font-size:6.6px;margin-bottom:8px}
+.cx-tale{font-size:9.4px;line-height:1.55;color:#cfe6dc;margin-bottom:10px}
+.lc-end{margin:10vh 0 0;max-width:46ch;font-size:clamp(1.2rem,1.8vw,1.7rem)}
+.lc-end::first-letter{all:unset}
+@media(hover:none),(max-width:600px){.cx-place{font-size:10px}.cx-tale{font-size:15px}}

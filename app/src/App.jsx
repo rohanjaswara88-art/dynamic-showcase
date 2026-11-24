@@ -8,6 +8,7 @@ import Nav from './components/Nav.jsx';
 import Gallery from './components/Gallery.jsx';
 import Landing from './components/Landing.jsx';
 import Lens from './components/Lens.jsx';
+import ThemeSplash from './components/ThemeSplash.jsx';
 import Cursor from './components/Cursor.jsx';
 import { startGL } from './lib/gl';
 import { startFX } from './lib/fx';
@@ -47,6 +48,7 @@ export default function App() {
       <canvas id="fx" className="fx" aria-hidden="true" />
       <Cursor />
       <Lens />
+      <ThemeSplash />
     </>
   );
 }

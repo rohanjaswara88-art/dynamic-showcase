@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { FOLIO, BEATS } from '../weapons/story';
@@ -10,34 +10,43 @@ import { scrollToTarget } from '../lib/scroll';
 const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
 const words = (t) => t.split(' ').map((w, i) => <span className="w" key={i}>{w + ' '}</span>);
 
-/** every word of every weapon, set very small on one page: only readable through the glass */
-function Codex() {
+/** one page holding every weapon: its story, and all of its small print. Read it by hovering: the text under the cursor zooms. */
+function Story({ lens }) {
+  const tales = BEATS.filter((b) => b.w !== undefined);
   return (
-    <section className="lc-codex" data-codex>
-      <p className="lc-num">Appendix</p>
-      <h2 className="lc-name long">The Codex of the Four</h2>
-      <p className="lc-place mono">Every word the keepers set down, in the hand they used. Too small to read? Hold the glass to the page.</p>
+    <section className="lc-story" data-story>
+      <p className="lc-num">The Chronicle</p>
+      <h2 className="lc-name long">Four relics, one page</h2>
+      <p className="lc-place mono">{BEATS[0].text}</p>
       <div className="cx-grid">
-        {WEAPONS.map((w) => (
-          <article className="cx" key={w.id}>
-            <h3 style={{ fontFamily: w.font, color: w.ac }}>{w.name}</h3>
-            <p className="cx-k"><b>Nature</b> {w.sin}. {w.sinLine} {w.tagline}</p>
-            <p><b>Found in</b> {w.lore.found}</p>
-            <p><b>Last owner</b> {w.lore.owner}</p>
-            <p><b>Fate</b> {w.lore.fate}</p>
-            <ol>
-              {w.parts.map((p, i) => (
-                <li key={p.id}><b>{String(i + 1).padStart(2, '0')} {p.name}</b>, {p.title.toLowerCase()}. {p.role} <i>{p.material}</i> {p.spec.map(([k, v]) => `${k}: ${v}`).join('. ')}.</li>
-              ))}
-            </ol>
-          </article>
-        ))}
+        {tales.map((b) => {
+          const w = WEAPONS[b.w];
+          return (
+            <article className="cx" key={w.id}>
+              <p className="cx-n">{b.num}</p>
+              <h3 style={{ fontFamily: w.font, color: w.ac }}>{w.name}</h3>
+              <p className="cx-place">{b.place}</p>
+              <p className="cx-tale">{b.text}</p>
+              <p className="cx-k"><b>Nature</b> {w.sin}. {w.sinLine} {w.tagline}</p>
+              <p><b>Found in</b> {w.lore.found}</p>
+              <p><b>Last owner</b> {w.lore.owner}</p>
+              <p><b>Fate</b> {w.lore.fate}</p>
+              <ol>
+                {w.parts.map((p, i) => (
+                  <li key={p.id}><b>{String(i + 1).padStart(2, '0')} {p.name}</b>, {p.title.toLowerCase()}. {p.role} <i>{p.material}</i> {p.spec.map(([k, v]) => `${k}: ${v}`).join('. ')}.</li>
+                ))}
+              </ol>
+            </article>
+          );
+        })}
       </div>
+      <p className="lc-p lc-end">{BEATS[BEATS.length - 1].text}</p>
+      <a className="lc-cta mono" href="#voracity" onClick={lens ? undefined : (e) => { e.preventDefault(); scrollToTarget('#voracity', { duration: 3 }); }}>{BEATS[BEATS.length - 1].cta}<i>↓</i></a>
     </section>
   );
 }
 
-/** the readable story. Rendered once on the page and once, scaled up, inside the magnifier lens (`lens`). */
+/** the page. Rendered once for real and once, scaled up, inside the hover-zoom (`lens`). */
 export function Content({ lens }) {
   return (
     <div className="lc-root" aria-hidden={lens || undefined}>
@@ -47,27 +56,7 @@ export function Content({ lens }) {
         <p className="lc-sub">{FOLIO.sub}</p>
         <p className="lc-cue mono"><span className="lc-line" />{FOLIO.cue}</p>
       </header>
-      {BEATS.map((b, i) => {
-        const last = i === BEATS.length - 1;
-        const w = b.w !== undefined ? WEAPONS[b.w] : null;
-        return (
-          <Fragment key={b.id}>
-          {last && <Codex />}
-          <section className={'lc-beat' + (i % 2 ? ' flip' : '')} data-beat={i}>
-            <div className="lc-head">
-              <p className="lc-num">{b.num}</p>
-              <h2 className={'lc-name' + (w ? '' : ' long')} style={w ? { fontFamily: w.font, color: w.ac, textShadow: `0 0 44px ${w.glow}66`, fontSize: `calc(clamp(2.2rem,6vw,6.4rem)*${w.fontScale})` } : undefined}>{w ? w.name : b.name}</h2>
-              <p className="lc-place mono">{b.place}</p>
-              <span className="lc-rule" />
-            </div>
-            <div className="lc-body">
-              <p className="lc-p">{words(b.text)}</p>
-              {b.cta && <a className="lc-cta mono" href="#voracity" onClick={lens ? undefined : (e) => { e.preventDefault(); scrollToTarget('#voracity', { duration: 3 }); }}>{b.cta}<i>↓</i></a>}
-            </div>
-          </section>
-          </Fragment>
-        );
-      })}
+      <Story lens={lens} />
     </div>
   );
 }
@@ -89,24 +78,13 @@ export default function Landing({ revealed }) {
     const root = sec.current, ctx = gsap.context(() => {
       /* the landing owns the world while it is on screen */
       ScrollTrigger.create({ trigger: root, start: 'top 62%', end: 'bottom 62%', onToggle: (s) => { if (s.isActive) world.cur = -1; } });
-      if (reduce) { root.querySelectorAll('.w').forEach((w) => { w.style.opacity = 1; }); return; }
+      if (reduce) return;
 
       gsap.to(bar.current, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: 'bottom bottom', scrub: 0.3 } });
       gsap.to(ring1.current, { rotation: 140, scale: 1.5, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: '+=1800', scrub: 0.6 } });
       gsap.to(ring2.current, { rotation: -200, scale: 1.25, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: '+=1800', scrub: 0.6 } });
       gsap.to(deco.current, { opacity: 0.08, ease: 'none', scrollTrigger: { trigger: root, start: 'top top', end: '+=1000', scrub: true } });
 
-      /* every word of every paragraph lights up as it is read */
-      root.querySelectorAll('.lc-p').forEach((p) => {
-        gsap.fromTo(p.querySelectorAll('.w'), { opacity: 0.14 }, { opacity: 1, stagger: 0.06, ease: 'none', scrollTrigger: { trigger: p, start: 'top 84%', end: 'bottom 48%', scrub: 0.4 } });
-      });
-      root.querySelectorAll('.lc-beat').forEach((b, i) => {
-        const head = b.querySelector('.lc-head'), rule = b.querySelector('.lc-rule');
-        gsap.fromTo(head.children, { opacity: 0 }, { opacity: 1, stagger: 0.12, duration: 1, ease: 'power2.out', scrollTrigger: { trigger: b, start: 'top 72%' } });
-        gsap.fromTo(rule, { scaleX: 0 }, { scaleX: 1, ease: 'none', scrollTrigger: { trigger: b, start: 'top 70%', end: 'center 50%', scrub: true } });
-        const t = BEATS[i].tint;
-        ScrollTrigger.create({ trigger: b, start: 'top 60%', end: 'bottom 60%', onToggle: (s) => { if (s.isActive) world.tint = t; } });
-      });
       /* the title letters rise in once the curtain is up */
       gsap.set(root.querySelectorAll('.lc-hero .ch'), { yPercent: 110, opacity: 0 });
       gsap.set(root.querySelectorAll('.lc-hero .lc-kicker,.lc-hero .lc-sub,.lc-hero .lc-cue'), { opacity: 0 });

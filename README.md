@@ -78,7 +78,7 @@ area it covers; see the notes in the final report for measured numbers.
 | `build_voracity.py` | Builds the model, materials, lights, camera and animation in Blender (5.2). Same 7 parts as the site. |
 | `voracity.blend` | The built scene (open it in Blender). |
 | `voracity.glb` | The model with its spin and pull-apart animation, for the web. |
-| `voracity_turntable.mp4` | A 12 second looping render: the scythe floats and spins, pulls apart into its parts and comes back together. |
+| `still_*.png`, `voracity_turntable.mp4` | Cycles (path-traced) stills and a 12 second loop: the scythe floats and spins, pulls apart into its parts and comes back together. |
 
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim
