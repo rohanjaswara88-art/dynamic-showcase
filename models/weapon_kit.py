@@ -99,9 +99,20 @@ def solid(scene, name, polys, half, material, parent, sc, bevel=0.0, dy=0.0):
     for p in me.polygons:
         p.use_smooth = False
     o = bpy.data.objects.new(name, me); o.data.materials.append(material)
-    if bevel:
-        md = o.modifiers.new('Chamfer', 'BEVEL'); md.width = bevel; md.segments = 1; md.limit_method = 'ANGLE'; md.angle_limit = math.radians(35)
     scene.collection.objects.link(o)
     if parent is not None:
         o.parent = parent
+    if bevel:
+        bake_chamfer(o, bevel)
     return o
+
+
+def bake_chamfer(o, width):
+    """a 2-segment chamfer on every hard edge, baked into the mesh; shading is smoothed across the chamfer (an even highlight) but left crisp at the sheet's real corners"""
+    md = o.modifiers.new('Chamfer', 'BEVEL'); md.width = width; md.segments = 2; md.profile = 0.5; md.limit_method = 'ANGLE'; md.angle_limit = math.radians(35)
+    bpy.context.view_layer.update()
+    me2 = bpy.data.meshes.new_from_object(o.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    old = o.data
+    o.modifiers.clear(); o.data = me2; me2.name = old.name; bpy.data.meshes.remove(old)
+    with bpy.context.temp_override(object=o, active_object=o, selected_objects=[o], selected_editable_objects=[o]):
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(34))

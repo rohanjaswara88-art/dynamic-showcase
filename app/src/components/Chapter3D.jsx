@@ -125,7 +125,7 @@ export default function Chapter3D({ index, data, revealed }) {
     /* ---------- what the aura, nature reveal and touch scan ask of a chapter ---------- */
     const ctl = {
       i: index, data, S, byId, st3,
-      get visible() { return visible && ready; }, frame,
+      get visible() { return visible && ready; }, frame, canvas: canvas.current,
       sample(idList) { const q = st3.sample(idList, out); return q ? [q[0] + ox, q[1] + oy, q[2], q[3], 1] : null; },
       hit(vx, vy) { return ready ? st3.hit(vx - ox, vy - oy) : null; },
       stable(idList, count) {
@@ -152,7 +152,14 @@ export default function Chapter3D({ index, data, revealed }) {
       leaders.current.setAttribute('viewBox', `0 0 ${W} ${H}`);
       st3.resize(W, H);
       fitName();
-      if (!ready) return;
+      if (!ready) {            // the model is still being fetched: hold the same pinned space now, so the page never changes height when it arrives
+        if (!reduce) {
+          tl = gsap.timeline({ scrollTrigger: { id: 'ch' + index, trigger: stage.current, start: 'top top', end: () => '+=' + Math.round(window.innerHeight * (5.5 + n * 0.8)), pin: true, anticipatePin: 1, invalidateOnRefresh: true } });
+          tl.to({}, { duration: 1 });
+          ScrollTrigger.refresh();
+        }
+        return;
+      }
       P = layout();
       stage.current.classList.toggle('land', P.land);
       Object.assign(S, P.hero, { ex: 0, hero: 1, lab: 0, fm: 0, lore: 0 });

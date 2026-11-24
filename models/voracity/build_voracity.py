@@ -14,6 +14,8 @@ import bpy, bmesh, math, os, sys, random, json
 from mathutils import Vector, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '..'))
+import weapon_kit as _kit
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 SC = 0.002                              # metres per reference pixel
 K = SC
@@ -294,9 +296,10 @@ def solid(name, polys, half, material, parent, bevel=0.0, flip=False):
     for p in me.polygons:
         p.use_smooth = False
     o = bpy.data.objects.new(name, me); o.data.materials.append(material)
+    link(o, parent)
     if bevel:
-        md = o.modifiers.new('Chamfer', 'BEVEL'); md.width = bevel; md.segments = 1; md.limit_method = 'ANGLE'; md.angle_limit = math.radians(35)
-    return link(o, parent)
+        _kit.bake_chamfer(o, bevel)
+    return o
 
 
 # per part: half thickness of the sheet, chamfer width, material of the sheet
@@ -309,7 +312,7 @@ SPEC = {
     'lowbind': dict(half=0.0100, bevel=0.0040, mat='dark'),
     'foot':    dict(half=0.0100, bevel=0.0040, mat='dark'),
 }
-PLATE_H = (0.007, 0.015, 0.024)
+PLATE_H = (0.009, 0.019, 0.030)
 PLATE_MAT = (M_DARK, M_PLATE, M_METAL)           # low plates darkest, the top rank lightest, so the layers read
 FLIP = False
 MATS = {'blade': M_BLADE, 'dark': M_DARK}

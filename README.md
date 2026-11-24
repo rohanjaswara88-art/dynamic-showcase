@@ -65,10 +65,17 @@ npm run build      # writes ../index.html and ../assets
 
 ## Performance notes
 
-No SVG filters, no CSS blur on large layers, DPR capped at 1.5 for the canvases, particle budget about 420, parts that are
-off screen are not drawn, loops pause in hidden tabs, and `prefers-reduced-motion` gets fewer particles, no pinning and a
-static exploded diagram. The weapon is vector and is re-rasterised on every pose change, so frame cost grows with the
-area it covers; see the notes in the final report for measured numbers.
+No SVG filters, no CSS blur on large layers, particle budget about 420, parts that are off screen are not drawn, loops pause in hidden tabs, and `prefers-reduced-motion` gets fewer particles, no pinning and a static exploded diagram.
+
+### How the 3D weapons are rendered (`lib/model3d.js`)
+
+- **Resolution and anti-aliasing:** the weapon is drawn supersampled (2x on ordinary screens, the native ratio on retina) into a 4x MSAA half-float render target and the browser scales it down, so every edge is an average of many samples. A frame-time governor trades quality for speed only if frames stay slow, in this order: supersampling, soft shadows, bloom. It never climbs back up.
+- **Tone mapping and colour:** Khronos Neutral tone mapping with sRGB output, so hues and saturation survive (ACES was washing the colours out).
+- **Bloom:** a controlled bloom on the lit inlays only (threshold, strength and radius per weapon); it adds light to the colour and leaves the canvas alpha alone, so the world behind the weapon still shows through.
+- **Shadows:** the key light casts soft PCF shadows (refreshed every other frame), so the raised plates shade the sheet beneath them.
+- **Materials:** physically based metal per weapon (themes in `lib/themes3d.js`), a 512 px reflection environment, and a procedural tileable normal map per surface kind (hammered, brushed, frost, etched; `lib/detailmaps.js`), mip-mapped and anisotropic, so surfaces carry fine detail without any image files.
+- **Aura:** the 2D aura layer is knocked out where the weapon is opaque, so the glow wraps behind the weapon instead of hazing over it.
+- **Geometry:** two-segment chamfers on every hard edge, shaded smooth across the chamfer but crisp at the real corners; contours low-pass filtered but with their sharp corners kept.
 
 ## 3D models (Blender)
 

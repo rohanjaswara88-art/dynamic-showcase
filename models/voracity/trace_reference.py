@@ -113,8 +113,26 @@ def orient(ring, ccw):
     return r
 
 
-def pack(polys):
-    return [[orient(r, k == 0) for k, r in enumerate(pg)] for pg in polys]
+def relax(ring, iters=3, keep_deg=105):
+    """low-pass the wobble out of a contour but keep real corners: points where the outline turns by more than ~75 degrees stay put"""
+    pts = [list(map(float, q)) for q in ring]
+    n = len(pts)
+    if n < 6:
+        return ring
+    for _ in range(iters):
+        new = []
+        for i in range(n):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % n]
+            v1, v2 = (a[0] - b[0], a[1] - b[1]), (c[0] - b[0], c[1] - b[1])
+            l1, l2 = (v1[0] ** 2 + v1[1] ** 2) ** 0.5, (v2[0] ** 2 + v2[1] ** 2) ** 0.5
+            ang = 180.0 if l1 * l2 == 0 else np.degrees(np.arccos(np.clip((v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2), -1, 1)))
+            new.append(b if ang < keep_deg else [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4])
+        pts = new
+    return np.array(pts)
+
+
+def pack(polys, smooth=False):
+    return [[orient(relax(r) if smooth else r, k == 0) for k, r in enumerate(pg)] for pg in polys]
 
 
 # --- lit areas as a soft field (bright AND coloured), and the dark armour body = the art minus the lit areas
@@ -123,7 +141,7 @@ Sg = cv2.GaussianBlur(Ss, (0, 0), 0.9)
 glowf = np.clip((Vs - 128.0) / 24.0, 0, 1) * np.clip((Sg - 22.0) / 28.0, 0, 1) * (cov > 0.5)
 glowf = cv2.morphologyEx(glowf, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
 bodyf = cov * (1.0 - glowf)
-Lb = cv2.GaussianBlur(Vv, (0, 0), 1.3)
+Lb = cv2.GaussianBlur(Vv, (0, 0), 1.9)
 LEVELS = (40, 64, 92)
 
 out = {'parts': {}}
@@ -145,7 +163,7 @@ for name, pm in PART.items():
         lf = np.clip((Lb - thr) / 7.0 + 0.5, 0, 1) * bodyf
         lf = cv2.morphologyEx(lf, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))          # bridge the hairline black strokes: they only alias into jagged dark lines at screen size
         lf = np.minimum(lf, cov)
-        for pg in pack(rings(lf, pm, eps=0.6, min_area=60, hole_min=20, level=0.52)):
+        for pg in pack(rings(lf, pm, eps=0.6, min_area=90, hole_min=26, level=0.52), smooth=True):
             plates.append({'h': lvl, 'rings': pg})
     out['parts'][name] = {'base': base, 'plates': plates, 'glow': glow}
     print(f"{name:8s} base {len(base)} polys, plates {len(plates)}, glow {len(glow)}")

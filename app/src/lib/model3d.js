@@ -1,10 +1,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { detailNormalMap } from './detailmaps';
 /* The live 3D weapons: the Blender models (models/<weapon>) drawn with three.js, each dressed and lit by its theme (lib/themes3d.js). Same seven parts
    as the 2D versions, same pull-apart offsets. Blender is Z-up, glTF / three is Y-up: Blender (x, y, z) arrives as (x, z, -y). */
 const K = 1 / 700, FOV = 30;
+const UV_PER_M = 5;                  // planar UVs: one texture tile every 20 cm
 
-function lookFor(m, look, envIntensity) {
+function lookFor(m, look, envIntensity, detail) {
   const spec = look[m.name] || { color: 0x2a2038, metalness: 0.9, roughness: 0.35 };
   const mat = new THREE.MeshPhysicalMaterial({
     color: spec.color, metalness: spec.metalness, roughness: spec.roughness,
@@ -12,6 +18,7 @@ function lookFor(m, look, envIntensity) {
     emissive: spec.emissive || 0x000000, emissiveIntensity: spec.glow || 0, envMapIntensity: envIntensity
   });
   mat.userData.glow = spec.glow || 0;
+  if (detail && !spec.glow) { mat.normalMap = detail.map; mat.normalScale.set(detail.scale, detail.scale); }      // fine surface relief on the metal, not on the lit inlays
   return mat;
 }
 
@@ -24,33 +31,52 @@ function makeEnvironment(renderer, env) {
     m.position.set(...pos); m.lookAt(0, 0, 0); sc.add(m);
   });
   const pm = new THREE.PMREMGenerator(renderer);
-  const tex = pm.fromScene(sc, 0.04).texture;
+  const tex = pm.fromScene(sc, 0.015, 0.1, 100, { size: 512 }).texture;                 // 512 px cube: crisp reflections
   pm.dispose();
   return tex;
 }
 
 export function createStage(canvas, partIds, exOffsets, theme) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: fine)').matches ? 2 : 1.5));      // sharper edges on desktop screens
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = theme.exposure;
+  /* Resolution: the weapon is drawn supersampled (2x on ordinary screens, so every edge is an average of four samples, on top of 4x MSAA in the render target)
+     and the browser scales it down. A frame-time governor lowers that only if the machine cannot keep up. */
+  const dpr = window.devicePixelRatio || 1, fine = matchMedia('(pointer: fine)').matches;
+  const maxPR = dpr >= 2 ? dpr : fine ? 2 : Math.min(1.5, Math.max(dpr, 1.25)), minPR = Math.min(dpr, maxPR);
+  let pr = maxPR;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, premultipliedAlpha: true, stencil: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(pr);
+  renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = theme.exposure;      // keeps hue and saturation (ACES washed the colours out)
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;      // refreshed every other frame, in render()
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
   scene.environment = makeEnvironment(renderer, theme.env);
-  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 60);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.25, 40);                 // a tight clipping range keeps depth precision for the thin inlays
   const key = new THREE.DirectionalLight(theme.key[0], theme.key[1]); key.position.set(-3, 4, 4); scene.add(key);
+  key.castShadow = true; key.shadow.mapSize.set(1536, 1536); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.004; key.shadow.radius = 2.5;
+  Object.assign(key.shadow.camera, { left: -2.6, right: 2.6, top: 2.6, bottom: -2.6, near: 0.5, far: 14 });          // plates cast soft shadows on the sheet below them
   const rim1 = new THREE.PointLight(theme.rim1[0], theme.rim1[1], 0, 1.6); rim1.position.set(...theme.rim1[2]); scene.add(rim1);
   const rim2 = new THREE.PointLight(theme.rim2[0], theme.rim2[1], 0, 1.6); rim2.position.set(...theme.rim2[2]); scene.add(rim2);
   const cursorLight = new THREE.PointLight(theme.cursor[0], 0, 0, 1.4); scene.add(cursorLight);
   const rollG = new THREE.Group(), spinG = new THREE.Group(); rollG.add(spinG); scene.add(rollG);
+
+  /* post: MSAA render target, controlled bloom on the lit inlays, then tone mapping and the sRGB conversion */
+  const target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, target);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), theme.bloom[0], theme.bloom[1], theme.bloom[2]);
+  /* the stock bloom writes alpha 1 everywhere, which would blank the world behind the canvas: add its light to the colour only and leave the alpha alone */
+  const bm = bloom.blendMaterial; bm.blending = THREE.CustomBlending; bm.blendEquation = THREE.AddEquation; bm.blendSrc = THREE.SrcAlphaFactor; bm.blendDst = THREE.OneFactor; bm.blendSrcAlpha = THREE.ZeroFactor; bm.blendDstAlpha = THREE.OneFactor; bm.needsUpdate = true;
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
 
   const api = {
     ready: false, renderer, camera, parts: {}, pivot: new THREE.Vector3(), boxes: {}, glow: [], exVec: {}, samples: {}, meshes: [], center0: new THREE.Vector3()
   };
   partIds.forEach((id) => { const e = exOffsets[id]; api.exVec[id] = new THREE.Vector3(e[1] * K * 1.25, e[0] * K * 1.25, 0); });
 
-  let begin = () => {};
+  let begin = () => {}, detail = null;
   const loading = new Promise((resolve, reject) => {
     begin = () => new GLTFLoader().load(theme.glb, (gltf) => {
+      if (theme.detail) detail = { map: detailNormalMap(theme.detail.kind, renderer), scale: theme.detail.scale };
       const root = gltf.scene;
       ['Voracity_Tilt', 'Voracity_Root'].forEach((n) => { const o = root.getObjectByName(n); if (o) { o.rotation.set(0, 0, 0); o.position.set(0, 0, 0); } });
       root.traverse((o) => { if (o.name && o.name.startsWith('Part_') && partIds.includes(o.name.slice(5))) { api.parts[o.name.slice(5)] = o; o.position.set(0, 0, 0); } });
@@ -65,7 +91,11 @@ export function createStage(canvas, partIds, exOffsets, theme) {
         node.traverse((o) => {
           if (o.isMesh && !o.userData.skin) {          // (the glow skin added below is a child, and the traversal would reach it)
             api.meshes.push(o); o.userData.part = id;
-            const old = o.material; o.material = lookFor(old, theme.look, theme.envIntensity); o.material.name = old.name;
+            const old = o.material; o.material = lookFor(old, theme.look, theme.envIntensity, detail); o.material.name = old.name;
+            const gp = o.geometry.attributes.position, uv = new Float32Array(gp.count * 2);
+            for (let i = 0; i < gp.count; i++) { uv[i * 2] = gp.getX(i) * UV_PER_M; uv[i * 2 + 1] = gp.getY(i) * UV_PER_M; }
+            o.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+            o.castShadow = !o.material.userData.glow; o.receiveShadow = true;
             const glowCol = o.geometry.attributes.color_1;          // Blender exports its default white colour as COLOR_0 and the painted glow as COLOR_1
             if (glowCol) o.geometry.setAttribute('color', glowCol);
             if (old.name === 'Voracity_Blade' && o.geometry.attributes.color) {          // the burning inner edge: vertex colours painted in Blender, added as light
@@ -89,7 +119,7 @@ export function createStage(canvas, partIds, exOffsets, theme) {
   let started = false;
   api.start = () => { if (!started) { started = true; begin(); } };           // the model is fetched when its chapter is near, not all four at page load
   api.loading = loading;
-  if (import.meta.env && import.meta.env.DEV) window.__stage3 = { api, scene };
+  if (import.meta.env && import.meta.env.DEV) { window.__stage3 = { api, scene }; (window.__stages = window.__stages || {})[theme.id] = { api, scene }; }
 
   const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _m = new THREE.Matrix4();
   const ray = new THREE.Raycaster();
@@ -104,7 +134,8 @@ export function createStage(canvas, partIds, exOffsets, theme) {
   };
   api.modelMatrix = (roll, spin) => new THREE.Matrix4().makeRotationZ(roll).multiply(new THREE.Matrix4().makeRotationY(spin));
 
-  api.resize = (w, h) => { W = w; H = h; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+  const sizeAll = () => { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); renderer.setSize(W, H, false); composer.setSize(W, H); bloom.resolution.set(Math.max(64, W * 0.4), Math.max(64, H * 0.4)); };          // (the glow is soft, so it is blurred at low resolution: cheap, whatever the supersampling)
+  api.resize = (w, h) => { W = w; H = h; sizeAll(); camera.aspect = w / h; camera.updateProjectionMatrix(); };
 
   /** put the camera and the model where state S says */
   api.apply = (S, focusId, time) => {
@@ -133,7 +164,25 @@ export function createStage(canvas, partIds, exOffsets, theme) {
     cursorLight.position.copy(camera.position).addScaledVector(dir, Math.max(0.6, camera.position.distanceTo(target) * 0.62));
   };
 
-  api.render = () => renderer.render(scene, camera);
+  /* frame-time governor: if frames stay slow it spends less, in this order: supersampling, soft shadows, bloom. It never climbs back up. */
+  let last = 0, ema = 16, slow = 0, tier = 0, frameNo = 0, warm = 150;                // (the first frames compile shaders and upload textures, so they do not count)
+  api.render = () => {
+    const now = performance.now(), dt = last ? Math.min(100, now - last) : 16; last = now;
+    ema += (dt - ema) * 0.06;
+    if (warm > 0) { warm--; ema = 16; slow = 0; }
+    else if (ema > 22 && !(import.meta.env && import.meta.env.DEV && window.__fullQuality)) {
+      if (++slow > 36) {
+        slow = 0; ema = 16; tier++;
+        if (tier === 1 && pr > minPR) { pr = minPR; sizeAll(); }
+        else if (tier <= 2) { key.castShadow = false; renderer.shadowMap.enabled = false; scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; }); }
+        else if (tier === 3) bloom.enabled = false;
+      }
+    } else slow = 0;
+    if (key.castShadow && (frameNo++ & 1) === 0) renderer.shadowMap.needsUpdate = true;
+    composer.render();
+  };
+  api.quality = () => ({ pr, minPR, maxPR, tier, ema, shadows: key.castShadow, bloom: bloom.enabled });
+  api.composer = composer; api.bloom = bloom;
 
   api.project = (v3, out) => {                                   // world point -> viewport pixel
     _v.copy(v3).project(camera);
@@ -172,7 +221,7 @@ export function createStage(canvas, partIds, exOffsets, theme) {
     } else { out[2] = 0; out[3] = -1; }
     return out;
   };
-  api.dispose = () => renderer.dispose();
+  api.dispose = () => { composer.dispose(); target.dispose(); renderer.dispose(); };
   void _m;
   return api;
 }

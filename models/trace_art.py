@@ -70,11 +70,31 @@ def rings(field, off, eps=0.5, min_area=6.0, hole_min=5.0, level=0.5):
     return out
 
 
-def pack(polys):
+def relax(ring, iters=3, keep_deg=105):
+    """low-pass the wobble out of a contour but keep real corners: points where the outline turns by more than ~75 degrees stay put"""
+    pts = [list(map(float, q)) for q in ring]
+    n = len(pts)
+    if n < 6:
+        return ring
+    for _ in range(iters):
+        new = []
+        for i in range(n):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % n]
+            v1, v2 = (a[0] - b[0], a[1] - b[1]), (c[0] - b[0], c[1] - b[1])
+            l1, l2 = (v1[0] ** 2 + v1[1] ** 2) ** 0.5, (v2[0] ** 2 + v2[1] ** 2) ** 0.5
+            ang = 180.0 if l1 * l2 == 0 else np.degrees(np.arccos(np.clip((v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2), -1, 1)))
+            new.append(b if ang < keep_deg else [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4])
+        pts = new
+    return np.array(pts)
+
+
+def pack(polys, smooth=False):
     res = []
     for pg in polys:
         rr = []
         for k, ring in enumerate(pg):
+            if smooth:
+                ring = relax(ring)
             r = [to_sc(u, v) for u, v in ring]
             area = sum(r[i][0] * r[(i + 1) % len(r)][1] - r[(i + 1) % len(r)][0] * r[i][1] for i in range(len(r)))
             if (area > 0) != (k == 0):
@@ -107,7 +127,7 @@ for p in fr['parts']:
     sl = (slice(v0, v1), slice(u0, u1))
     cov = sil[sl]
     A = art[sl]
-    lum = cv2.GaussianBlur(0.299 * A[..., 0] + 0.587 * A[..., 1] + 0.114 * A[..., 2], (0, 0), 1.0)
+    lum = cv2.GaussianBlur(0.299 * A[..., 0] + 0.587 * A[..., 1] + 0.114 * A[..., 2], (0, 0), 1.7)
     if p in cfg['glow_whole']:
         glowf = cov.copy()
         gkind = cfg['glow_whole'][p]
@@ -133,7 +153,7 @@ for p in fr['parts']:
             lf = np.clip((lum - thr) / 0.04 + 0.5, 0, 1) * body
             lf = cv2.morphologyEx(lf, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
             lf = np.minimum(lf, cov)
-            for pg in pack(rings(lf, off, eps=0.6, min_area=70, hole_min=24, level=0.52)):
+            for pg in pack(rings(lf, off, eps=0.6, min_area=110, hole_min=30, level=0.52), smooth=True):
                 plates.append({'h': lvl, 'rings': pg})
     out['parts'][p] = {'base': base, 'plates': plates, 'glow': glow}
     print(f"{p:9s} base {len(base)} polys, plates {len(plates)}, glow {len(glow)}")

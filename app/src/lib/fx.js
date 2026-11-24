@@ -192,6 +192,15 @@ export function startFX(canvas) {
       }
     }
 
+    /* keep the weapon itself crisp: where it is opaque, knock most of the aura out, so the glow wraps behind the weapon instead of hazing over it
+       (the 3D canvas was drawn earlier in this same tick, so its buffer is still valid to read) */
+    const mc = live && !world.reduce && ctl.canvas;
+    if (mc) {
+      const r = mc.getBoundingClientRect();
+      ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 0.88;
+      ctx.drawImage(mc, r.left, r.top, r.width, r.height);
+    }
+
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   });
   return () => { off(); removeEventListener('resize', resize); };

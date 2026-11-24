@@ -55,7 +55,7 @@ M = {
     'eye': kit.glow(f'{PRE}_Eye', TH['eye'], TH['eye_k']),
 }
 LEVEL_MAT = ('low', 'mid', 'high')
-PLATE_H = (0.005, 0.011, 0.017)
+PLATE_H = (0.007, 0.014, 0.022)
 
 # ---------------------------------------------------------------- the parts
 TILT = bpy.data.objects.new(f'{PRE}_Lean', None); scene.collection.objects.link(TILT)
@@ -68,6 +68,8 @@ for i, pid in enumerate(ORDER):
     e = bpy.data.objects.new('Part_' + pid, None); e.empty_display_size = 0.05; scene.collection.objects.link(e); e.parent = TILT; parts[pid] = e
     thick = pid in TH['thick']
     half, bev = (0.008, 0.003) if thick else (0.0045, 0.0038)
+    if pid in ('core', 'gem', 'eye'):
+        half = 0.026                                    # the lit gem / eye sits proud of the plates it overlaps
     dy = -(i - (n - 1) / 2) * 0.004                       # drawn later = nearer the viewer, so overlapping parts sit in the right order
     kit.solid(scene, f'{pid}_base', d['base'], half, M['base'], e, SC, bev, dy)
     for k in range(3):
