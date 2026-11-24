@@ -9,3 +9,4 @@ Thumbs.db
 # traced-art scratch images (re-exported by app/tools/export-weapon-art.md)
 models/_art/
 __pycache__/
+*.blend1
