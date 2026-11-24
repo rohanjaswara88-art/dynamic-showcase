@@ -284,7 +284,6 @@ export function startGL(canvas) {
   let seen = world.cur, start = performance.now() / 1000;
   const off = onFrame((tt) => {
     if (window.__dbg && window.__dbg.gl === 0) return;
-    if (world.cover) return;                    // a full-screen film hides this layer
     const now = performance.now() / 1000;
     adapt();
     const cur = world.cur;
