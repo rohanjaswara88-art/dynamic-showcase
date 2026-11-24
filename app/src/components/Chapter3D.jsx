@@ -8,6 +8,7 @@ import { world } from '../lib/world';
 import { reduceMotion } from '../lib/anim';
 import { scroller } from '../lib/scroll';
 import { createStage } from '../lib/model3d';
+import { THEMES } from '../lib/themes3d';
 
 /* A weapon chapter drawn as a live 3D model (three.js): the same scroll story as the 2D chapters. */
 const ROMAN = ['I', 'II', 'III', 'IV'];
@@ -27,7 +28,7 @@ export default function Chapter3D({ index, data, revealed }) {
     const ids = parts.map((p) => p.id);
     const S = { roll: -0.45, spin: 0.5, yaw: 0.1, pitch: 0.14, dist: 5, tx: 0, ty: 0, tz: 0, offx: 0, offy: 0, ex: 0, hero: 1, lab: 0, fm: 0, lore: 0 };
     let W = 1, H = 1, P = null, tl = null, activeNow = -1, visible = false, labsOn = false, ready = false, ox = 0, oy = 0, drag = 0, dragP = 0, tmr = 0;
-    const st3 = createStage(canvas.current, ids, ex);
+    const theme = THEMES[data.id], st3 = createStage(canvas.current, ids, ex, theme);
     const byId = {}; parts.forEach((p, i) => { byId[p.id] = i; });
     const stableCache = {}, tmp = new THREE.Vector3(), out = [0, 0, 0, 0];
 
@@ -57,10 +58,10 @@ export default function Chapter3D({ index, data, revealed }) {
         : { hero: [0.5, 0.48, 0.86, 0.66], over: [0.5, 0.5, 0.5, 0.8], focus: [0.5, 0.27, 0.84, 0.4], lore: [0.5, 0.27, 0.8, 0.4] };
       const place = (reg, f) => ({ ...f, offx: W / 2 - reg[0] * W, offy: H / 2 - reg[1] * H });
       const whole = pointsFor(ids, 0), apart = pointsFor(ids, 1);
-      const heroRoll = land ? -0.38 : -0.2, overRoll = land ? -Math.PI / 2 : 0;
-      const hero = { roll: heroRoll, spin: 0.12, yaw: 0.06, pitch: 0.08, ...place(R.hero, fit(whole, heroRoll, 0.12, 0.06, 0.08, R.hero[2], R.hero[3])) };
+      const heroRoll = land ? theme.heroRoll : theme.heroRoll * 0.5, overRoll = land ? -Math.PI / 2 : 0;
+      const hero = { roll: heroRoll, spin: 0.04, yaw: 0.03, pitch: 0.05, ...place(R.hero, fit(whole, heroRoll, 0.04, 0.03, 0.05, R.hero[2], R.hero[3])) };
       const over = { roll: overRoll, spin: 0, yaw: 0, pitch: 0.06, ...place(R.over, fit(apart, overRoll, 0, 0, 0.06, R.over[2], R.over[3])) };
-      const lore = { roll: heroRoll, spin: 0.2, yaw: 0.06, pitch: 0.08, ...place(R.lore, fit(whole, heroRoll, 0.2, 0.06, 0.08, R.lore[2], R.lore[3])) };
+      const lore = { roll: heroRoll, spin: 0.1, yaw: 0.04, pitch: 0.06, ...place(R.lore, fit(whole, heroRoll, 0.1, 0.04, 0.06, R.lore[2], R.lore[3])) };
       const cams = parts.map((p, i) => {
         const spin = (i % 2 ? -0.3 : 0.3), f = fit(st3.corners(p.id, 1), overRoll, spin, 0.05, 0.1, R.focus[2] * 0.62, R.focus[3] * 0.62, 0.7);
         return { roll: overRoll, spin, yaw: 0.05, pitch: 0.1, ...place(R.focus, f) };
@@ -76,7 +77,7 @@ export default function Chapter3D({ index, data, revealed }) {
       /* a slow turntable swing while the weapon is whole, plus whatever the visitor dragged */
       drag *= Math.exp(-(dt || 0.016) * 0.9); dragP *= Math.exp(-(dt || 0.016) * 0.9);
       const calm = Math.max(S.hero, S.lore) * (1 - S.ex);
-      const S2 = { ...S, spin: S.spin + Math.sin(t * 0.5) * 0.3 * calm + Math.sin(t * 0.35) * 0.12 * S.fm + drag, pitch: S.pitch + dragP };
+      const S2 = { ...S, spin: S.spin + Math.sin(t * 0.5) * 0.14 * calm + Math.sin(t * 0.35) * 0.12 * S.fm + drag, pitch: S.pitch + dragP };
       st3.apply(S2, activeNow >= 0 && S.fm > 0.5 ? parts[activeNow].id : null, t);
       /* the pointer lights the metal */
       const lx = (world.px - ox) / W * 2 - 1, ly = -((world.py - oy) / H) * 2 + 1;
@@ -188,6 +189,8 @@ export default function Chapter3D({ index, data, revealed }) {
     st3.loading.then(() => { ready = true; build(); }).catch((e) => console.warn('model failed', e));
     world.frames = world.frames || new Set(); world.frames.add(frame);
 
+    const near = ScrollTrigger.create({ trigger: section.current, start: 'top bottom+=300%', end: 'bottom top', refreshPriority: -1, onToggle: (self) => { if (self.isActive) st3.start(); } });
+    if (reduce) st3.start();
     const vis = ScrollTrigger.create({
       trigger: section.current, start: 'top bottom+=10%', end: 'bottom top-=10%', refreshPriority: -1,
       onToggle: (self) => { visible = self.isActive; canvas.current.style.display = visible ? '' : 'none'; leaders.current.style.display = visible ? '' : 'none'; }
@@ -196,7 +199,7 @@ export default function Chapter3D({ index, data, revealed }) {
       trigger: section.current, start: 'top 62%', end: 'bottom 62%', refreshPriority: -1,
       onToggle: (self) => { if (self.isActive) world.cur = index; }
     });
-    visible = vis.isActive;
+    visible = vis.isActive; if (vis.isActive || near.isActive) st3.start();
 
     /* drag to turn it */
     const el = canvas.current.parentElement;
@@ -220,7 +223,7 @@ export default function Chapter3D({ index, data, revealed }) {
     kids.go = (p) => { ScrollTrigger.refresh(); const s = ScrollTrigger.getById('ch' + index); if (s) { const y = s.start + p * (s.end - s.start); if (scroller.lenis) scroller.lenis.scrollTo(y, { immediate: true, force: true }); else window.scrollTo(0, y); ScrollTrigger.update(); } };
     world.go[index] = kids.go;
     return () => {
-      clearTimeout(t); clearTimeout(tmr); ro.disconnect(); world.frames.delete(frame); vis.kill(); cur.kill();
+      clearTimeout(t); clearTimeout(tmr); ro.disconnect(); world.frames.delete(frame); vis.kill(); near.kill(); cur.kill();
       el.removeEventListener('pointerdown', pd); window.removeEventListener('pointermove', pm); window.removeEventListener('pointerup', pu);
       if (tl) { tl.scrollTrigger && tl.scrollTrigger.kill(); tl.kill(); }
       delete world.chapters[index]; delete world.go[index]; st3.dispose();

@@ -45,7 +45,7 @@ npm run build      # writes ../index.html and ../assets
 - `lib/geom.js`: the path kit (polygons, Catmull-Rom curves, ribbons along a centre-line, thorns, seeded random).
 - `weapons/kit.jsx`: `Part`, the wrapper every weapon part uses. It adds a soft cast shadow (stacked widening strokes of the
   part's own silhouette, no SVG filters), a cursor light overlay and an infrared heat overlay.
-- `lib/model3d.js`, `components/Chapter3D.jsx`: the live 3D scythe (three.js loads `app/src/assets/voracity.glb`, exported from Blender by `models/voracity/build_voracity.py`). Voracity uses it; if WebGL or the model fails, the 2D drawing is used instead.
+- `lib/model3d.js`, `lib/themes3d.js`, `components/Chapter3D.jsx`: all four weapons are live 3D (three.js loads `app/src/assets/<weapon>.glb`, built in Blender from the traced artwork, see "3D models" below). Each weapon has a theme: how its materials look and the little studio and lights it is shown in, matched to the world behind it (hellfire magentas, icy cyan and white, a crimson eclipse rim, violet storm light with hot orange from the lava below). A model is only fetched when its chapter is near. If WebGL or a model fails, that weapon's 2D drawing is used instead.
 - `weapons/voracity.jsx`, `halcyon.jsx`, `eclipse.jsx`, `avarice.jsx`: the four weapons, in "sword space" (long axis on +x).
 - `weapons/data.js`: names, fonts, sins, lore, per-part text and explode offsets.
 - `lib/pose.js`: fitting a weapon into screen regions (hero, exploded overview, a camera for each part, lore) for any screen.
@@ -72,16 +72,19 @@ area it covers; see the notes in the final report for measured numbers.
 
 ## 3D models (Blender)
 
-`models/voracity/` holds the first 3D relic, the scythe, built entirely from a script so it can be re-run and tuned. The model follows a reference drawing: a bowed shaft with a double-twist throat, an almond talon at the foot, a wide crescent blade whose inner face burns, three ranks of sharp crest plates along its back, and a horned bone ring. Same 7 parts as the site:
+Every model is thin flat sheets with chamfered knife edges, raised plates stacked on top and the lit areas as glowing inlays, built from a traced picture, so the silhouettes, spikes and cutouts are the artwork's own. Edges are traced from soft (anti-aliased) fields, so outlines are smooth with no pixel stair-steps.
 
-| File | What it is |
-| --- | --- |
-| `build_voracity.py` | Builds the model, materials, lights, camera and animation in Blender (5.2). Same 7 parts as the site. |
-| `voracity.blend` | The built scene (open it in Blender). |
-| `voracity.glb` | The model with its spin and pull-apart animation, for the web. |
-| `ref_view.png`, `still_*.png` | Cycles (path-traced) renders: a face-on view leaning like the reference, and two frames of the animation. |
+| Weapon | Traced from | Files |
+| --- | --- | --- |
+| Voracity (scythe) | `models/voracity/reference.jpg`, a drawing | `trace_reference.py` makes `outline.json`; `build_voracity.py` builds it (and a Cycles scene with animation) |
+| Halcyon, Eclipse, Avarice | the site's own SVG drawings, rasterised per part by the browser | `app/tools/export-weapon-art.md` (export), `models/trace_art.py` (trace), `models/build_weapon.py` (build) |
+
+`models/<weapon>/` holds the `outline.json`, the `.glb` (also copied to `app/src/assets/`), the `.blend` and a face-on Cycles render (`ref_view.png`; the scythe also has `head_view.png`).
 
 ```powershell
-& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- ref 96 1000 1250      # face-on render (ref_view.png)
-& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python models/voracity/build_voracity.py -- anim     # the 12 second loop (slow)
+cd models
+python voracity/trace_reference.py                  # the scythe: reference.jpg -> outline.json
+python trace_art.py hal                             # a sword: needs models/_art/hal from the export tool; also ecl, ava
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python voracity/build_voracity.py -- ref 96 1000 1250   # scythe render (add `head` for a close-up)
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --python build_weapon.py -- hal ref 64 900 1400         # a sword (halcyon | eclipse | avarice)
 ```

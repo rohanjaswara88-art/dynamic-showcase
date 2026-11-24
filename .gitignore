@@ -5,3 +5,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# traced-art scratch images (re-exported by app/tools/export-weapon-art.md)
+models/_art/
+__pycache__/

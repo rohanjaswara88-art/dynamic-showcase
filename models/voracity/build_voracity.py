@@ -6,10 +6,11 @@ Run (from this folder):
     blender -b --python build_voracity.py -- still 120          # also renders one PNG still at frame 120
     blender -b --python build_voracity.py -- anim               # also renders voracity_turntable.mp4
 
-Same seven parts and proportions as the SVG scythe on the site (SVG x runs up the shaft, SVG y across it, 1/700 = metres).
+The shape comes from reference.jpg: trace_reference.py turns it into outline.json (silhouette, plates, lit areas, cut into the seven parts) and this
+script extrudes that into thin chamfered sheets. Seven parts, same names as the site. Re-trace with:  python trace_reference.py
 Blender: Z up, X across (the blade side), Y depth.
 """
-import bpy, bmesh, math, os, sys, random
+import bpy, bmesh, math, os, sys, random, json
 from mathutils import Vector, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -117,9 +118,9 @@ def glow(name, color, strength, rough=0.25):
     return m
 
 
-M_METAL = metal('Voracity_ForgedMetal', (0.045, 0.03, 0.07), coat=0.15, rough=(0.26, 0.5), scale=(50, 50, 5), bump=0.22)
-M_PLATE = metal('Voracity_Plate', (0.05, 0.03, 0.085), coat=0.25, rough=(0.27, 0.5), scale=(40, 40, 8), bump=0.3, bevel=0.003)
-M_DARK = metal('Voracity_BlackIron', (0.02, 0.015, 0.03), rough=(0.3, 0.6), scale=(70, 70, 3), bump=0.35)
+M_METAL = metal('Voracity_ForgedMetal', (0.075, 0.05, 0.12), coat=0.15, rough=(0.26, 0.5), scale=(50, 50, 5), bump=0.22)
+M_PLATE = metal('Voracity_Plate', (0.05, 0.03, 0.09), metallic=0.75, coat=0.25, rough=(0.3, 0.5), scale=(40, 40, 8), bump=0.3, bevel=0.003)
+M_DARK = metal('Voracity_BlackIron', (0.03, 0.02, 0.055), metallic=0.8, rough=(0.3, 0.55), scale=(70, 70, 3), bump=0.35)
 
 M_VINE = bpy.data.materials.new('Voracity_Vine'); _nt, _b = nodes_of(M_VINE)
 _b.inputs['Base Color'].default_value = (0.05, 0.025, 0.08, 1); _b.inputs['Metallic'].default_value = 0.25
@@ -128,25 +129,10 @@ _b.inputs['Coat Weight'].default_value = 0.3; _b.inputs['Coat Roughness'].defaul
 tex_scratches(_nt, _b, scale=(30, 30, 30), bump_strength=0.55, rough=(0.3, 0.6), pits=True, bevel=0.0015, base_color=(0.05, 0.025, 0.08))
 
 M_EYE = glow('Voracity_Eyelet', (1.0, 0.2, 0.8), 1.5)
-M_RING_GLOW = glow('Voracity_RingGlow', (1.0, 0.3, 0.9), 3.5)
-M_GLASS = glow('Voracity_VioletGlass', (0.55, 0.16, 1.0), 1.2, rough=0.08)
+M_RING_GLOW = glow('Voracity_RingGlow', (1.0, 0.22, 0.85), 0.45)
+M_GLASS = glow('Voracity_VioletGlass', (0.7, 0.16, 1.0), 0.6, rough=0.08)
 
-# the blade: dark forged outer plate; the inner (concave) edge burns, hottest at the edge. U: inner edge 0 -> outer edge 1.
-M_BLADE = bpy.data.materials.new('Voracity_Blade'); nt, b = nodes_of(M_BLADE)
-b.inputs['Base Color'].default_value = (0.022, 0.01, 0.045, 1); b.inputs['Metallic'].default_value = 0.8
-b.inputs['Coat Weight'].default_value = 0.2; b.inputs['Coat Roughness'].default_value = 0.05
-uvn = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(uvn.outputs['UV'], sep.inputs[0])
-ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'EASE'
-el = ramp.color_ramp.elements; el[0].position = 0.0; el[0].color = (1.0, 0.72, 1.0, 1); el[1].position = 0.56; el[1].color = (0, 0, 0, 1)
-x = el.new(0.05); x.color = (1.0, 0.4, 0.95, 1); x = el.new(0.24); x.color = (0.72, 0.14, 0.95, 1); x = el.new(0.44); x.color = (0.16, 0.02, 0.36, 1)
-nt.links.new(sep.outputs['X'], ramp.inputs['Fac'])
-mar = nt.nodes.new('ShaderNodeTexNoise'); mar.inputs['Scale'].default_value = 9; mar.inputs['Detail'].default_value = 8
-mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 0.75
-nt.links.new(ramp.outputs['Color'], mix.inputs['A']); nt.links.new(mar.outputs['Color'], mix.inputs['B'])
-nt.links.new(mix.outputs['Result'], b.inputs['Emission Color'])
-pv = pulse_value(M_BLADE); mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 1.7
-nt.links.new(pv.outputs[0], mul.inputs[0]); nt.links.new(mul.outputs[0], b.inputs['Emission Strength'])
-tex_scratches(nt, b, scale=(30, 30, 30), bump_strength=0.25, rough=(0.26, 0.5), bevel=0.002, ao=False)
+M_BLADE = metal('Voracity_Blade', (0.035, 0.02, 0.065), metallic=0.8, coat=0.3, rough=(0.25, 0.45), scale=(30, 30, 30), bump=0.25, bevel=0.002)
 
 
 # ============================================================== geometry helpers
@@ -271,9 +257,9 @@ def forged_blade(name, cl, wa, wb, material, parent=None, t0=0.0, t1=1.0, n=150,
 
 
 # ============================================================== the scythe
-# Rebuilt from the reference drawing. Coordinates are (s, c): s = distance up the shaft from the foot spike, c = distance across it toward the
-# blade side, both in reference pixels (2 mm each). A bowed shaft with a double-twist throat, an almond talon at the foot, and at the head a wide
-# crescent blade whose inner face burns, a stack of spiked crest plates along its back, and a horned bone ring.
+# Built from outline.json, which trace_reference.py makes from reference.jpg: the real silhouette (every spike, cutout and hole), cut into the seven
+# parts, extruded into thin flat sheets with chamfered knife edges, with the raised armour plates and the lit areas on top.
+# Coordinates are (s, c): s = distance up the shaft from the foot spike, c = distance across it toward the blade side, in reference pixels (2 mm each).
 TILT = bpy.data.objects.new('Voracity_Tilt', None); TILT.rotation_euler = (math.radians(-8), math.radians(26), 0); link(TILT)
 ROOT = bpy.data.objects.new('Voracity_Root', None); link(ROOT, TILT)
 parts = {}
@@ -285,162 +271,57 @@ def part(name):
     return e
 
 
-def Dv(ds, dc, dd=0.0):
-    return Vector((dc, dd, ds))
+OUTLINE = json.load(open(os.path.join(HERE, 'outline.json')))['parts']
+STAND = Matrix.Rotation(math.pi / 2, 4, 'X')               # the curves are drawn in XY (x = c, y = s); this stands them up in XZ
 
 
-def cr(pts, n=20):
-    """Catmull-Rom through 2D points"""
-    out = []
-    for i in range(len(pts) - 1):
-        p0, p1, p2, p3 = pts[max(0, i - 1)], pts[i], pts[i + 1], pts[min(len(pts) - 1, i + 2)]
-        for k in range(n):
-            t = k / n; t2 = t * t; t3 = t2 * t
-            out.append(tuple(0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3) for j in range(2)))
-    out.append(tuple(pts[-1]))
-    return out
+def solid(name, polys, half, material, parent, bevel=0.0, flip=False):
+    """polys: [[outer, hole, ...], ...] (each ring a list of [s, c]) -> one mesh, a flat sheet 2*half thick with chamfered edges"""
+    if not polys:
+        return None
+    cu = bpy.data.curves.new(name + '_c', 'CURVE'); cu.dimensions = '2D'; cu.fill_mode = 'BOTH'; cu.extrude = half; cu.resolution_u = 1
+    for pg in polys:
+        for ring in pg:
+            ring = ring[::-1] if flip else ring
+            sp = cu.splines.new('POLY'); sp.points.add(len(ring) - 1); sp.use_cyclic_u = True
+            for i, (s, c) in enumerate(ring):
+                sp.points[i].co = (c * SC, s * SC, 0, 1)
+    co = bpy.data.objects.new(name + '_c', cu); bpy.context.scene.collection.objects.link(co)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(co.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(co); bpy.data.curves.remove(cu)
+    me.transform(STAND); me.name = name
+    for p in me.polygons:
+        p.use_smooth = False
+    o = bpy.data.objects.new(name, me); o.data.materials.append(material)
+    if bevel:
+        md = o.modifiers.new('Chamfer', 'BEVEL'); md.width = bevel; md.segments = 1; md.limit_method = 'ANGLE'; md.angle_limit = math.radians(35)
+    return link(o, parent)
 
 
-def bow(s):
-    return 46 * math.sin(math.pi * min(max(s, 0.0), 722.0) / 722.0)
-
-
-def radial_thorns(prefix, centre, radius, count, length, base, material, parent, tilt=0.35, phase=0.0):
-    for i in range(count):
-        a = phase + i / count * math.pi * 2
-        out = Vector((math.sin(a), math.cos(a), 0))
-        talon(f'{prefix}{i}', centre + out * radius, out + Vector((0, 0, tilt)), length, base, material, parent, curl=Vector((0, 0, tilt * 0.6)), n=7)
-
-
-# --- shaft: dark ironwood core, iron ferrules, a long-pitch pair of thorned vines
-SH = part('shaft')
-tube('Shaft', [Q(s, bow(s)) for s in range(90, 748, 12)], 0.027, M_DARK, SH, taper=lambda t: 0.8 + 0.35 * t + 0.06 * math.sin(t * 14), res=16)
-for s in (262, 396, 470, 548):
-    torus('Ferrule', 0.027, 0.0078, M_METAL, (bow(s) * SC, 0, s * SC), parent=SH, seg=48, ring=12)
-for k, ph in enumerate((0.0, math.pi)):
-    pts = []
-    for i in range(0, 241):
-        s = 384 + (544 - 384) * i / 240
-        a = (s - 384) / 80 * math.pi * 2 + ph
-        r = 0.036 + 0.004 * math.sin(s * 0.31 + ph)
-        pts.append(Vector((bow(s) * SC + r * math.sin(a), r * math.cos(a), s * SC)))
-    tube(f'Vine{k}', pts, 0.0118, M_VINE, SH, taper=lambda t: 0.8 + 0.3 * math.sin(t * 50), res=6)
-    for i in range(10, 240, 30):
-        p = pts[i]; out = Vector((p.x - bow(p.z / SC) * SC, p.y, 0)).normalized(); sg = 1 if (i // 30) % 2 else -1
-        talon(f'Thorn{k}_{i}', p, out + Vector((0, 0, 0.55 * sg)), 0.075, 0.0085, M_PLATE, SH, curl=Vector((0, 0, 0.42 * sg)), n=6)
-
-
-def helix_binding(name, s0, s1, R, turns, strand):
-    """two strands crossing round an open core, thorned collars at both ends, glowing beads down the middle"""
-    e = part(name)
-    for k, ph in enumerate((0.0, math.pi)):
-        pts = []
-        for i in range(0, 221):
-            u = i / 220; s = s0 + (s1 - s0) * u
-            a = u * turns * 2 * math.pi + ph; r = R * (0.86 + 0.14 * math.sin(u * math.pi))
-            pts.append(Vector((bow(s) * SC + r * math.sin(a), r * math.cos(a), s * SC)))
-        tube(f'{name}_strand{k}', pts, strand, M_VINE, e, taper=lambda t: 0.7 + 0.4 * math.sin(math.pi * t), res=8)
-        for i in range(14, 220, 36):
-            p = pts[i]; out = Vector((p.x - bow(p.z / SC) * SC, p.y, 0)).normalized(); sg = 1 if (i // 36) % 2 else -1
-            talon(f'{name}_thorn{k}_{i}', p, out + Vector((0, 0, 0.6 * sg)), R * 1.25, strand * 0.62, M_PLATE, e, curl=Vector((0, 0, 0.5 * sg)), n=6)
-    for s in (s0 - 6, s1 + 6):
-        c = Vector((bow(s) * SC, 0, s * SC))
-        torus(f'{name}_collar', R * 0.82, strand * 1.05, M_PLATE, tuple(c), parent=e, seg=64, ring=16)
-        radial_thorns(f'{name}_cthorn', c, R * 0.8, 6, R * 0.95, strand * 0.5, M_PLATE, e, tilt=0.5 if s == s1 + 6 else -0.5, phase=0.3)
-    for i in range(1, 5):
-        s = s0 + (s1 - s0) * i / 5
-        uvsphere_at(f'{name}_bead', (bow(s) * SC, 0, s * SC), 0.0085, M_EYE, parent=e)
-    return e
-
-
-helix_binding('lowbind', 280, 372, 0.04, 1.5, 0.0115)
-helix_binding('upbind', 566, 716, 0.052, 1.75, 0.0145)
-
-# --- foot talon: an almond of two twisting strands with a lit core, ending in a hooked spike
-FT = part('foot')
-for k in range(2):
-    pts = []
-    for i in range(0, 81):
-        u = i / 80; s = 262 + (62 - 262) * u
-        w = 48 * math.sin(math.pi * u) ** 0.8; ph = 1.2 * math.pi * u + k * math.pi
-        pts.append(Q(s, bow(s) + w * math.cos(ph), w * 0.55 * math.sin(ph)))
-    tube(f'AlmondStrand{k}', pts, 0.021, M_PLATE, FT, taper=lambda t: 0.4 + 0.6 * math.sin(math.pi * t) ** 0.6, res=8)
-glow_core = uvsphere_at('FootCore', Q(162, bow(162)), 1.0, M_EYE, parent=FT)
-glow_core.scale = (0.02, 0.014, 0.12)
-hook = quad_bez((84, 14), (38, 14), (-8, -22), 40)
-tube('FootSpike', [Q(s, c) for s, c in hook], 0.036, M_METAL, FT, taper=lambda t: max(0.03, (1 - t) ** 0.9), res=10)
-for sg in (1, -1):
-    talon(f'FootBlade{sg}', Q(112, bow(112) + sg * 8), Dv(-0.8, sg * 0.55), 0.19, 0.022, M_PLATE, FT, curl=Dv(-0.05, sg * 0.25), n=10)
-
-# --- ring: a horned bone ring with burning eyelets, a pink throat ribbon, and a fan of claws
-RS, RC, RR = 790, -141, 62
-rc = Q(RS, RC)
-RG = part('ring')
-pts = []
-for i in range(0, 181):
-    a = i / 180 * math.pi * 2
-    r = RR * (1 + 0.07 * math.sin(3 * a + 0.6) + 0.04 * math.sin(7 * a)) * SC
-    pts.append(Vector((rc.x + r * math.sin(a), 0.0, rc.z + r * math.cos(a))))
-tube('Ring', pts, 0.036, M_PLATE, RG, taper=lambda t: 0.9 + 0.28 * math.sin(t * math.pi * 6), res=14, cyclic=True)
-torus('RingGlow', (RR - 20) * SC, 0.0065, M_RING_GLOW, tuple(rc), rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=12)
-torus('RingRim', (RR + 22) * SC, 0.0048, M_GLASS, tuple(rc), rot=(math.pi / 2, 0, 0), parent=RG, seg=128, ring=10)
-for a in (200, 262, 330):
-    ar = math.radians(a)
-    p = Q(RS + RR * math.cos(ar), RC + RR * math.sin(ar))
-    uvsphere_at('Eyelet', p, 0.028, M_EYE, parent=RG)
-    torus('EyeletSocket', 0.028, 0.008, M_PLATE, tuple(p), rot=(math.pi / 2, 0, 0), parent=RG, seg=48, ring=12)
-# horns and spikes round the ring (angle 0 = up the shaft, 90 = toward the blade), length and base in reference pixels
-for ang, ln, base in ((298, 156, 12), (278, 118, 10.5), (252, 98, 10), (226, 84, 9.5), (205, 66, 9), (184, 56, 8.5), (322, 76, 9), (348, 62, 8), (14, 54, 7.5), (60, 48, 7), (110, 46, 7)):
-    ar = math.radians(ang); ds, dc = math.cos(ar), math.sin(ar)
-    p0 = Q(RS + (RR + 8) * ds, RC + (RR + 8) * dc)
-    talon(f'Horn{ang}', p0, Dv(ds, dc), ln * SC, base * SC * 1.45, M_PLATE, RG, curl=Dv(-dc, ds) * 0.16 * (1 if ang < 300 else -1), n=18)
-ribbon = quad_bez((782, -82), (738, -66), (726, -8), 40)
-tube('ThroatGlow', [Q(s, c) for s, c in ribbon], 0.0105, M_RING_GLOW, RG, taper=lambda t: 0.6 + 0.6 * math.sin(math.pi * t), res=8)
-for ds, dc, ln, base in ((0.72, -0.69, 96, 10), (0.3, -0.95, 84, 9), (-0.5, -0.86, 74, 9), (-0.85, -0.5, 66, 8), (0.9, 0.2, 70, 8)):
-    talon('Claw', Q(730, 0), Dv(ds, dc), ln * SC, base * SC, M_PLATE, RG, curl=Dv(-dc, ds) * 0.1, n=14)
-
-# --- blade: a wide crescent, its inner face burning (U across the width: 0 at the inner edge)
-BL = Line(cr([(790, -88), (822, -40), (843, 15), (842, 80), (826, 148), (800, 208), (766, 253), (722, 288), (676, 314), (638, 328), (612, 334)], 18))
-wtot = lambda t: 100 * math.pow(1 - t, 0.82) * min(1.0, 0.62 + t * 4.2)
-wa = lambda t: wtot(t) * 0.52
-wb = lambda t: wtot(t) * 0.48
-BLD = part('blade')
-forged_blade('Blade', BL, wa, wb, M_BLADE, BLD, n=190, thick=0.011)
-
-
-def outer_edge(t):
-    (cx, cy), (tx, ty) = BL.at(t); nx, ny = -ty, tx
-    return (cx - nx * wb(t), cy - ny * wb(t)), (-nx, -ny), (tx, ty)
-
-
-for i, t in enumerate((0.05, 0.12, 0.2, 0.29, 0.38, 0.47)):          # hooked spines along the back, curling toward the root
-    (bx, by), (ox, oy), (tx, ty) = outer_edge(t)
-    d = Vector((0, 0, 0)); dd = (ox * 0.7 - tx * 0.9, oy * 0.7 - ty * 0.9); m = math.hypot(*dd)
-    talon(f'Spine{i}', Q(bx, by), Dv(dd[0] / m, dd[1] / m), (58 - i * 5) * SC, (13 - i * 1.1) * SC, M_PLATE, BLD, curl=Dv(-ty, tx) * -0.3, n=10)
-for i, t in enumerate((0.07, 0.17, 0.27, 0.37, 0.48, 0.6)):          # burning eyelets cut into the dark upper half
-    (cx, cy), (tx, ty) = BL.at(t); nx, ny = -ty, tx
-    o = -wtot(t) * 0.26
-    p = Q(cx + nx * o, cy + ny * o)
-    for side in (1, -1):
-        e = uvsphere_at(f'BladeEye{i}_{side}', p, 1.0, M_EYE, parent=BLD)
-        e.scale = (wtot(t) * 0.34 * SC, 0.005, (wtot(t) * 0.1 + 2) * SC)
-        e.rotation_euler = (0, math.atan2(-tx, ty), 0)
-        e.location.y = 0.034 * side * (1 - 0.5 * t)
-
-# --- mantle: the crest, three ranks of sharp curved plates stacked along the back of the blade, all sweeping back toward the root
-MT = part('mantle')
-FEATHER_SEC = [(1.0, 0.0), (0.55, 0.9), (0.0, 1.7), (-0.55, 0.9), (-1.0, 0.0)]
-for layer in range(3):
-    for i in range(8):
-        t = min(0.92, 0.03 + i * 0.072 + layer * 0.03); L = (200 - i * 15) * (1 - 0.14 * layer)
-        (bx, by), (ox, oy), (tx, ty) = outer_edge(t)
-        inset = wtot(t) * 0.5 + 5 * layer
-        b = (bx - ox * inset, by - oy * inset)
-        ctrl = (b[0] + ox * L * 0.6 + tx * L * 0.05, b[1] + oy * L * 0.6 + ty * L * 0.05)
-        tip = (b[0] + ox * L * 0.62 - tx * L * 0.8, b[1] + oy * L * 0.62 - ty * L * 0.8)
-        wf = (lambda k: (lambda u: 31 * k * math.pow(1 - u, 0.62) * min(1.0, 0.45 + u * 5)))(1 - 0.15 * layer)
-        forged_blade(f'Crest{layer}_{i}', Line(quad_bez(b, ctrl, tip, 34)), wf, wf, M_PLATE, MT, n=34, thick=0.0085, taper_thick=0.5,
-                     sec=FEATHER_SEC, dy=((layer - 1) * 0.011 + (0.006 if i % 2 else -0.006)), smooth=False)
+# per part: half thickness of the sheet, chamfer width, material of the sheet
+SPEC = {
+    'blade':   dict(half=0.0045, bevel=0.0042, mat='blade'),
+    'mantle':  dict(half=0.0055, bevel=0.0036, mat='blade'),
+    'ring':    dict(half=0.0095, bevel=0.0040, mat='dark'),
+    'upbind':  dict(half=0.0105, bevel=0.0040, mat='dark'),
+    'shaft':   dict(half=0.0100, bevel=0.0040, mat='dark'),
+    'lowbind': dict(half=0.0100, bevel=0.0040, mat='dark'),
+    'foot':    dict(half=0.0100, bevel=0.0040, mat='dark'),
+}
+PLATE_H = (0.007, 0.015, 0.024)
+PLATE_MAT = (M_DARK, M_PLATE, M_METAL)           # low plates darkest, the top rank lightest, so the layers read
+FLIP = False
+MATS = {'blade': M_BLADE, 'dark': M_DARK}
+for pname in ('foot', 'lowbind', 'shaft', 'upbind', 'ring', 'mantle', 'blade'):
+    P_ = part(pname); d = OUTLINE[pname]; sp_ = SPEC[pname]
+    base = solid('Blade' if pname == 'blade' else f'{pname}_base', d['base'], sp_['half'], MATS[sp_['mat']], P_, sp_['bevel'], FLIP)
+    for k in range(3):                                                  # the raised plates, three heights so they read as layers
+        pl = [p['rings'] for p in d['plates'] if p['h'] == k]
+        solid(f'{pname}_plates{k}', pl, sp_['half'] + PLATE_H[k], PLATE_MAT[k], P_, 0.0062, FLIP)
+    for kind, mat in (('face', M_RING_GLOW), ('eye', M_GLASS)):          # the lit areas, a hair above the sheet (the plates stand proud of them)
+        gl = [g['rings'] for g in d['glow'] if g['kind'] == kind]
+        solid(f'{pname}_glow_{kind}', gl, sp_['half'] + 0.0007, mat, P_, 0.0, FLIP)
 
 # ============================================================== stage
 floor_m = bpy.data.materials.new('Obsidian'); fnt, fb = nodes_of(floor_m)
@@ -487,10 +368,11 @@ RIG = bpy.data.objects.new('LightRig', None); link(RIG)
 key = light('Key', 'AREA', (-3.0, -3.2, 3.6), 260, (0.95, 0.85, 1.0), 2.6, RIG)
 rim1 = light('RimMagenta', 'AREA', (3.4, 2.4, 2.4), 1500, (1.0, 0.25, 0.85), 1.6, RIG)
 rim2 = light('RimBlue', 'AREA', (-3.2, 2.8, 2.0), 520, (0.35, 0.3, 1.0), 1.6, RIG)
+front = light('Fill', 'AREA', (-1.5, -4.2, 1.6), 38, (0.85, 0.7, 1.0), 3.5, RIG)
 strip1 = light('StripL', 'AREA', (-1.6, -1.2, 1.2), 70, (1.0, 0.35, 0.9), 0.3, RIG); strip1.data.shape = 'RECTANGLE'; strip1.data.size = 0.18; strip1.data.size_y = 3.0
 strip2 = light('StripR', 'AREA', (1.7, -1.0, 1.0), 70, (0.5, 0.4, 1.0), 0.3, RIG); strip2.data.shape = 'RECTANGLE'; strip2.data.size = 0.18; strip2.data.size_y = 3.0
 top = light('Beam', 'SPOT', (0.4, -0.2, 6.2), 1300, (0.9, 0.7, 1.0)); top.data.spot_size = math.radians(26); top.data.spot_blend = 0.8
-for l in (key, rim1, rim2, top, strip1, strip2):
+for l in (key, rim1, rim2, top, strip1, strip2, front):
     tt = l.constraints.new('TRACK_TO'); tt.target = TARGET; tt.track_axis = 'TRACK_NEGATIVE_Z'; tt.up_axis = 'UP_Y'
 
 cam_d = bpy.data.cameras.new('Cam'); cam_d.lens = 38
@@ -608,11 +490,13 @@ if ARGS[:1] == ['ref']:                    # face-on, no animation, leaning like
     TILT.rotation_euler = (0, 0, 0); ROOT.rotation_euler = (0, math.radians(-21), 0); ROOT.location = (0, 0, 0); RIG.rotation_euler = (0, 0, 0)
     for p_ in parts.values():
         p_.animation_data_clear(); p_.location = (0, 0, 0)
-    TARGET.location = (-0.35, 0, 0.9); CAM.location = (-0.35, -3.1, 0.95); cam_d.lens = 50
+    TARGET.location = (-0.45, 0, 0.9); CAM.location = (-0.45, -3.4, 0.95); cam_d.lens = 50
+    if 'head' in ARGS:                                   # a close-up of the head
+        TARGET.location = (-0.3, 0, 1.62); CAM.location = (-0.3, -2.0, 1.66)
     cy.samples = int(ARGS[1]) if len(ARGS) > 1 else 48
-    scene.render.resolution_x, scene.render.resolution_y = (int(ARGS[2]), int(ARGS[3])) if len(ARGS) > 3 else (900, 1100)
+    scene.render.resolution_x, scene.render.resolution_y = (int(ARGS[2]), int(ARGS[3])) if len(ARGS) > 3 and ARGS[3].isdigit() else (900, 1100)
     scene.render.image_settings.file_format = 'PNG'
-    scene.render.filepath = os.path.join(HERE, 'ref_view.png')
+    scene.render.filepath = os.path.join(HERE, 'head_view.png' if 'head' in ARGS else 'ref_view.png')
     bpy.ops.render.render(write_still=True)
     print('RENDERED ref')
 elif ARGS[:1] == ['still']:

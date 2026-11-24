@@ -17,13 +17,18 @@ class Safe3D extends Component {
 
 const ART = { halcyon: Halcyon, eclipse: Eclipse, avarice: Avarice };
 
-/** Four chapters, one per weapon. Each pins itself and scrubs its own timeline; the world behind them (shader + particles) is fixed. */
+/** Four chapters, one per weapon, each a live 3D model (its 2D drawing is the fallback if WebGL or the model cannot start). Each pins itself and scrubs
+ *  its own timeline; the world behind them (shader + particles) is fixed. */
+const ART_BY_ID = { voracity: Voracity, ...ART };
+
 export default function Gallery({ revealed }) {
   return (
     <div className="gallery" id="gallery">
-      {WEAPONS.map((w, i) => (w.id === 'voracity'
-        ? <Safe3D key={w.id} fallback={<Chapter index={i} data={w} Art={Voracity} revealed={revealed} />}><Chapter3D index={i} data={w} revealed={revealed} /></Safe3D>
-        : ART[w.id] && <Chapter key={w.id} index={i} data={w} Art={ART[w.id]} revealed={revealed} />))}
+      {WEAPONS.map((w, i) => (ART_BY_ID[w.id] && (
+        <Safe3D key={w.id} fallback={<Chapter index={i} data={w} Art={ART_BY_ID[w.id]} revealed={revealed} />}>
+          <Chapter3D index={i} data={w} revealed={revealed} />
+        </Safe3D>
+      )))}
     </div>
   );
 }

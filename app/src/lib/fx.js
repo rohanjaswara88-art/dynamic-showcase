@@ -21,7 +21,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 /* aura + ambient per weapon: [kind, rate/s, parts, params] */
 const AURA = [
   /* VORACITY: hellfire. Magenta flame tongues licking up off the blade, mantle and ring, sparks, a few soul wisps */
-  { glow: ['rgba(255,90,235,0.6)', 16, 200, 0.24], parts: ['blade', 'blade', 'mantle', 'ring', 'upbind', 'foot'], emit: [['flame', 72], ['spark', 28], ['wisp', 12]], ambient: [['ember', 24, '255,120,230']] },
+  { glow: ['rgba(255,90,235,0.5)', 10, 150, 0.15], parts: ['blade', 'blade', 'mantle', 'ring', 'upbind', 'foot'], emit: [['flame', 34], ['spark', 18], ['wisp', 6]], ambient: [['ember', 24, '255,120,230']] },
   /* HALCYON: frost. Cold mist and ice streaks pouring down off the blade and wings, glints */
   { glow: ['rgba(150,225,255,0.55)', 18, 230, 0.2], parts: ['blade', 'blade', 'wings', 'shardsU', 'shardsL', 'core', 'pommel'], emit: [['rain', 22], ['mist', 26], ['glint', 14]], ambient: [['flake', 3]] },
   /* ECLIPSE: dark smoke with a red rim pouring off the steel, motes pulled into the gem */

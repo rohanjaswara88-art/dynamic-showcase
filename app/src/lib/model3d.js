@@ -1,65 +1,46 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import glbUrl from '../assets/voracity.glb?url';
-
-/* The live 3D scythe: the Blender model (models/voracity) drawn with three.js. Same seven parts as the 2D version,
-   same pull-apart offsets. Blender is Z-up, glTF / three is Y-up: Blender (x, y, z) arrives as (x, z, -y). */
+/* The live 3D weapons: the Blender models (models/<weapon>) drawn with three.js, each dressed and lit by its theme (lib/themes3d.js). Same seven parts
+   as the 2D versions, same pull-apart offsets. Blender is Z-up, glTF / three is Y-up: Blender (x, y, z) arrives as (x, z, -y). */
 const K = 1 / 700, FOV = 30;
 
-/* what each Blender material becomes in the browser (Blender's procedural scratches and glow do not travel in a .glb) */
-const LOOK = {
-  Voracity_ForgedMetal: { color: 0x3c3254, metalness: 0.95, roughness: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.15 },
-  Voracity_Plate: { color: 0x3a2a5a, metalness: 0.92, roughness: 0.26, clearcoat: 0.55, clearcoatRoughness: 0.1 },
-  Voracity_BlackIron: { color: 0x241a38, metalness: 0.85, roughness: 0.4 },
-  Voracity_Vine: { color: 0x30204e, metalness: 0.4, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.3 },
-  Voracity_Blade: { color: 0x1e1236, metalness: 0.92, roughness: 0.24, clearcoat: 0.5, clearcoatRoughness: 0.06 },
-  Voracity_Eyelet: { color: 0x200a1c, metalness: 0, roughness: 0.3, emissive: 0xff4de6, glow: 2.6 },
-  Voracity_RingGlow: { color: 0x200a1c, metalness: 0, roughness: 0.3, emissive: 0xff4ae0, glow: 2.0 },
-  Voracity_VioletGlass: { color: 0x14082a, metalness: 0, roughness: 0.1, emissive: 0x8a2bff, glow: 1.2 }
-};
-
-function lookFor(m) {
-  const spec = LOOK[m.name] || { color: 0x2a2038, metalness: 0.9, roughness: 0.35 };
+function lookFor(m, look, envIntensity) {
+  const spec = look[m.name] || { color: 0x2a2038, metalness: 0.9, roughness: 0.35 };
   const mat = new THREE.MeshPhysicalMaterial({
     color: spec.color, metalness: spec.metalness, roughness: spec.roughness,
     clearcoat: spec.clearcoat || 0, clearcoatRoughness: spec.clearcoatRoughness ?? 0.1,
-    emissive: spec.emissive || 0x000000, emissiveIntensity: spec.glow || 0, envMapIntensity: 1.6
+    emissive: spec.emissive || 0x000000, emissiveIntensity: spec.glow || 0, envMapIntensity: envIntensity
   });
   mat.userData.glow = spec.glow || 0;
   return mat;
 }
 
-/** a tiny studio for the metal to reflect: dark room, a magenta strip, a blue-violet strip, a white softbox */
-function makeEnvironment(renderer) {
+/** a tiny studio for the metal to reflect, from the theme's coloured panels */
+function makeEnvironment(renderer, env) {
   const sc = new THREE.Scene();
-  sc.background = new THREE.Color(0x05030a);
-  const panel = (w, h, color, pos, int) => {
+  sc.background = new THREE.Color(env.bg);
+  env.panels.forEach(([w, h, color, pos, int]) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(int), side: THREE.DoubleSide }));
     m.position.set(...pos); m.lookAt(0, 0, 0); sc.add(m);
-  };
-  panel(1.2, 7, 0xff3ad8, [-5, 1, 2], 14);
-  panel(1.2, 7, 0x6a5cff, [5, 1, -1], 11);
-  panel(6, 3, 0xe9ddff, [-2, 6, 4], 8);
-  panel(8, 1.4, 0xb04cff, [0, -4, 3], 4);
-  panel(10, 10, 0x2a1458, [0, 3, -8], 2.5);
+  });
   const pm = new THREE.PMREMGenerator(renderer);
   const tex = pm.fromScene(sc, 0.04).texture;
   pm.dispose();
   return tex;
 }
 
-export function createStage(canvas, partIds, exOffsets) {
+export function createStage(canvas, partIds, exOffsets, theme) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: fine)').matches ? 2 : 1.5));      // sharper edges on desktop screens
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = theme.exposure;
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
-  scene.environment = makeEnvironment(renderer);
+  scene.environment = makeEnvironment(renderer, theme.env);
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 60);
-  const key = new THREE.DirectionalLight(0xf2e6ff, 4.5); key.position.set(-3, 4, 4); scene.add(key);
-  const rim1 = new THREE.PointLight(0xff3ad8, 140, 0, 1.6); rim1.position.set(3.2, 2.4, -2.5); scene.add(rim1);
-  const rim2 = new THREE.PointLight(0x5a4cff, 90, 0, 1.6); rim2.position.set(-3.2, 1.2, -2.8); scene.add(rim2);
-  const cursorLight = new THREE.PointLight(0xffd6ff, 0, 0, 1.4); scene.add(cursorLight);
+  const key = new THREE.DirectionalLight(theme.key[0], theme.key[1]); key.position.set(-3, 4, 4); scene.add(key);
+  const rim1 = new THREE.PointLight(theme.rim1[0], theme.rim1[1], 0, 1.6); rim1.position.set(...theme.rim1[2]); scene.add(rim1);
+  const rim2 = new THREE.PointLight(theme.rim2[0], theme.rim2[1], 0, 1.6); rim2.position.set(...theme.rim2[2]); scene.add(rim2);
+  const cursorLight = new THREE.PointLight(theme.cursor[0], 0, 0, 1.4); scene.add(cursorLight);
   const rollG = new THREE.Group(), spinG = new THREE.Group(); rollG.add(spinG); scene.add(rollG);
 
   const api = {
@@ -67,8 +48,9 @@ export function createStage(canvas, partIds, exOffsets) {
   };
   partIds.forEach((id) => { const e = exOffsets[id]; api.exVec[id] = new THREE.Vector3(e[1] * K * 1.25, e[0] * K * 1.25, 0); });
 
+  let begin = () => {};
   const loading = new Promise((resolve, reject) => {
-    new GLTFLoader().load(glbUrl, (gltf) => {
+    begin = () => new GLTFLoader().load(theme.glb, (gltf) => {
       const root = gltf.scene;
       ['Voracity_Tilt', 'Voracity_Root'].forEach((n) => { const o = root.getObjectByName(n); if (o) { o.rotation.set(0, 0, 0); o.position.set(0, 0, 0); } });
       root.traverse((o) => { if (o.name && o.name.startsWith('Part_') && partIds.includes(o.name.slice(5))) { api.parts[o.name.slice(5)] = o; o.position.set(0, 0, 0); } });
@@ -83,7 +65,7 @@ export function createStage(canvas, partIds, exOffsets) {
         node.traverse((o) => {
           if (o.isMesh && !o.userData.skin) {          // (the glow skin added below is a child, and the traversal would reach it)
             api.meshes.push(o); o.userData.part = id;
-            const old = o.material; o.material = lookFor(old); o.material.name = old.name;
+            const old = o.material; o.material = lookFor(old, theme.look, theme.envIntensity); o.material.name = old.name;
             const glowCol = o.geometry.attributes.color_1;          // Blender exports its default white colour as COLOR_0 and the painted glow as COLOR_1
             if (glowCol) o.geometry.setAttribute('color', glowCol);
             if (old.name === 'Voracity_Blade' && o.geometry.attributes.color) {          // the burning inner edge: vertex colours painted in Blender, added as light
@@ -104,6 +86,8 @@ export function createStage(canvas, partIds, exOffsets) {
       api.root = root; api.ready = true; resolve(api);
     }, undefined, reject);
   });
+  let started = false;
+  api.start = () => { if (!started) { started = true; begin(); } };           // the model is fetched when its chapter is near, not all four at page load
   api.loading = loading;
   if (import.meta.env && import.meta.env.DEV) window.__stage3 = { api, scene };
 
@@ -138,12 +122,12 @@ export function createStage(canvas, partIds, exOffsets) {
     camera.updateMatrixWorld(true);
     const pulse = 0.72 + 0.28 * Math.sin(time * 2.4) + 0.08 * Math.sin(time * 5.7);
     for (const m of api.glow) { if (m.isMeshBasicMaterial) m.color.setScalar((0.55 + 0.45 * pulse) * 1.35); else m.emissiveIntensity = m.userData.glow * pulse; }
-    rim1.intensity = 140 * (0.8 + 0.3 * Math.sin(time * 1.7)); rim2.intensity = 90 * (0.85 + 0.25 * Math.sin(time * 1.3 + 2));
+    rim1.intensity = theme.rim1[1] * (0.8 + 0.3 * Math.sin(time * 1.7)); rim2.intensity = theme.rim2[1] * (0.85 + 0.25 * Math.sin(time * 1.3 + 2));
   };
 
   /** a light that follows the pointer, so the metal catches it */
   api.pointerLight = (nx, ny, amount, target) => {
-    cursorLight.intensity = 40 * amount;
+    cursorLight.intensity = theme.cursor[1] * amount;
     _v.set(nx, ny, 0.3).unproject(camera);
     const dir = _v.sub(camera.position).normalize();
     cursorLight.position.copy(camera.position).addScaledVector(dir, Math.max(0.6, camera.position.distanceTo(target) * 0.62));
