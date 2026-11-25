@@ -8,6 +8,24 @@ moment when that heat touches the weapon, and a lore card at the end of its scro
 React 18, GSAP + ScrollTrigger, Lenis. **There are no image files**: the weapons are SVG paths, the worlds are a fragment
 shader, the auras are generated sprites. Everything stays sharp at any zoom.
 
+**The making of:** an animated write-up of the phases, the tools and every problem we hit and how it was solved lives in [`making-of/`](making-of/index.html) (open `/making-of/` on the live site).
+
+## What it is for
+
+A portfolio-grade demonstration of scroll storytelling, real-time shaders and 3D in the browser: a chronicle that leads into four pinned chapters, one per weapon. Each weapon pulls apart into seven parts, tours them with a details panel, reassembles and ends on a lore card, with its own world, aura, typeface and "nature" revealed by the cursor.
+
+## Phases
+
+1. The brief and the worlds: vector SVG weapons, one fragment shader with five worlds, a canvas aura per weapon.
+2. Scroll choreography: pinned, scrubbed GSAP timelines with Lenis smooth scroll.
+3. The landing chronicle: ancient-voice story text and a hover zoom.
+4. Cursor and "nature": a light that follows the pointer, a nature reveal, a fluid-splash cursor tinted per sword.
+5. A real 3D scythe: scripted in Blender, exported as glTF, drawn live with three.js.
+6. A scroll-video experiment, reverted at the owner's choice.
+7. Matching a reference exactly: the model is traced from the drawing and built as thin chamfered sheets.
+8. The other three swords: their own SVG art rasterised by the browser, traced and built the same way.
+9. The quality pass: supersampling, MSAA target, controlled bloom, soft shadows, procedural surface detail and a quality governor.
+
 | # | Weapon | Nature | Font | World |
 | --- | --- | --- | --- | --- |
 | I | **Voracity**, a scythe | Gluttony | Eater | purple hellfire |

@@ -43,7 +43,7 @@ export default function App() {
       <main>
         <Landing revealed={revealed} />
         <Gallery revealed={revealed} />
-        <footer className="foot mono"><span>© 2026 dynamic.showcase</span><span>Four weapons. More soon.</span></footer>
+        <footer className="foot mono"><span>© 2026 dynamic.showcase</span><span>Four weapons. More soon.</span><a href="./making-of/">The making of →</a></footer>
       </main>
       <canvas id="fx" className="fx" aria-hidden="true" />
       <Cursor />
